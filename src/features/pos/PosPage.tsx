@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { useApp, useT } from '@/store/app';
@@ -21,7 +21,7 @@ import { CustomItemModal } from './CustomItemModal';
 import { Icon } from '@/components/Icon';
 import { flyToCart } from '@/lib/fly';
 import { DAY } from '@/core/date';
-import { compareProductNames, matchesProduct, normaliseCode, normaliseText } from '@/core/search';
+import { buildProductSearchIndex, compareProductNames, matchesProduct, normaliseCode, normaliseText, searchIndexedProducts } from '@/core/search';
 import { arrangeProducts, loadView, saveView, type PosView } from './viewOptions';
 import type { ModifierGroup, Product } from '@/db/types';
 
@@ -30,7 +30,8 @@ export function PosPage() {
   const settings = useApp((s) => s.settings);
   const user = useApp((s) => s.user);
   const shift = useApp((s) => s.shift);
-  const cart = useCart();
+  const cartHasItems = useCart((s) => s.items.length > 0);
+  const cartHasOrder = useCart((s) => Boolean(s.orderId));
   const totals = useCartTotals();
   const route = useRoute();
 
@@ -49,7 +50,7 @@ export function PosPage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   // カートが空になったらモバイルのドロワーは閉じた扱いにする。
-  const showMobileCart = cartOpen && cart.items.length > 0;
+  const showMobileCart = cartOpen && cartHasItems;
   const [view, setView] = useState<PosView>(loadView);
   const changeView = (v: PosView) => {
     setView(v);
@@ -78,11 +79,6 @@ export function PosPage() {
     new Map<string, number>(),
   );
   const reserved = useReserved();
-  const cartQty = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const i of cart.items) m.set(i.productId, (m.get(i.productId) ?? 0) + i.qty);
-    return m;
-  }, [cart.items]);
   const stockAlert = useUI((s) => s.stockAlert);
   const heldCount = useLiveQuery(async () => db.orders.where('status').equals('open').count(), [], 0);
 
@@ -92,6 +88,9 @@ export function PosPage() {
   );
 
   const modsById = useMemo(() => new Map(modifierGroups.map((g) => [g.id, g])), [modifierGroups]);
+
+  const searchIndex = useMemo(() => buildProductSearchIndex(activeProducts), [activeProducts]);
+  const deferredSearch = useDeferredValue(search);
 
   /* Resume a table order or a held ticket passed in the URL. */
   const resumeId = route.query.get('order');
@@ -109,7 +108,7 @@ export function PosPage() {
   }, [resumeId]);
 
   useEffect(() => {
-    if (cart.items.length === 0 && !cart.orderId) {
+    if (!cartHasItems && !cartHasOrder) {
       useCart.getState().setType(settings.businessType === 'retail' ? 'retail' : 'dine_in');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 業態切り替え時のみ既定の注文種別を合わせる
@@ -124,9 +123,10 @@ export function PosPage() {
   const pick = useCallback(
     (product: Product, qty = 1, source?: HTMLElement | null) => {
       if (product.trackStock && !product.isService && !settings.negativeStock) {
-        const inCart = cart.items
+        const inCart = useCart.getState().items
           .filter((i) => i.productId === product.id)
           .reduce((s, i) => s + i.qty, 0);
+
         const held = reserved.get(product.id) ?? 0;
         if (product.stock - held - inCart - qty < 0) {
           useUI.getState().showStockAlert(
@@ -143,7 +143,14 @@ export function PosPage() {
         flyToCart(source ?? null, product.id);
       }
     },
-    [cart.items, groupsFor, settings.negativeStock, t, reserved],
+    [groupsFor, settings.negativeStock, t, reserved],
+  );
+
+  const handleTilePick = useCallback(
+    (product: Product, source?: HTMLElement | null) => {
+      pick(product, 1, source);
+    },
+    [pick],
   );
 
   /** Resolve a scanned or typed code. "3*8934..." adds three at once - the
@@ -154,10 +161,8 @@ export function PosPage() {
     const term = (match ? match[2] : raw).trim();
     if (!term) return false;
     const normTerm = normaliseCode(term);
-    const exact = activeProducts.find(
-      (p) => (p.barcode && normaliseCode(p.barcode) === normTerm) || (p.sku && normaliseCode(p.sku) === normTerm),
-    );
-    const matches = filterProducts(activeProducts, term);
+    const exact = searchIndex.byBarcode.get(normTerm) ?? searchIndex.bySku.get(normTerm);
+    const matches = exact ? [exact] : searchIndexedProducts(searchIndex, term);
     const target = exact ?? (matches.length === 1 ? matches[0] : null);
     if (target) {
       pick(target, qty > 0 ? qty : 1);
@@ -174,14 +179,15 @@ export function PosPage() {
   };
 
   const doHold = async () => {
-    if (!cart.items.length) return;
-    await holdOrder(cart, { user, settings, shiftId: shift?.id ?? null });
+    const cartState = useCart.getState();
+    if (!cartState.items.length) return;
+    await holdOrder(cartState, { user, settings, shiftId: shift?.id ?? null });
     useCart.getState().clear();
     toast.success(t('pos.hold'));
   };
 
   const doClear = async () => {
-    if (!cart.items.length) return;
+    if (!useCart.getState().items.length) return;
     const ok = await confirmDialog({
       title: t('pos.clearCart'),
       message: t('pos.clearCartConfirm'),
@@ -210,15 +216,16 @@ export function PosPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- F2/F4/F9ショートカット内で最新のハンドラ・状態を参照する
-  }, [cart.items.length, user, settings, shift]);
+  }, [user, settings, shift]);
 
   const visible = useMemo(() => {
-    let list = arrangeProducts(activeProducts, view, sold, settings.lang);
+    const term = deferredSearch.replace(/^\s*\d+(?:[.,]\d+)?\s*[*xX]\s*/, '').trim();
+    const base = term ? searchIndexedProducts(searchIndex, term) : activeProducts;
+    let list = arrangeProducts(base, view, sold, settings.lang);
     if (categoryId === 'fav') list = list.filter((p) => p.favorite);
     else if (categoryId !== 'all') list = list.filter((p) => p.categoryId === categoryId);
-    const term = search.replace(/^\s*\d+(?:[.,]\d+)?\s*[*xX]\s*/, '');
-    return term.trim() ? filterProducts(list, term) : list;
-  }, [activeProducts, categoryId, search, view, sold, settings.lang]);
+    return list;
+  }, [activeProducts, searchIndex, deferredSearch, categoryId, view, sold, settings.lang]);
 
   return (
     <div className="pos">
@@ -244,7 +251,7 @@ export function PosPage() {
         search={search}
         onSearch={setSearch}
         onSubmitSearch={submitSearch}
-        onPick={(p, el) => pick(p, 1, el)}
+        onPick={handleTilePick}
         view={view}
         onView={changeView}
         searchRef={searchRef}
@@ -253,7 +260,6 @@ export function PosPage() {
         onScan={() => setScanning(true)}
         onCustomItem={() => setCustomOpen(true)}
         cartCount={totals.unitCount}
-        cartQty={cartQty}
         reserved={reserved}
         cartTotal={totals.total}
         onOpenCart={() => setCartOpen(true)}

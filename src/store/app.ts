@@ -15,6 +15,7 @@ import {
 import { loadOrInitSettings, seedWorkspace } from '@/db/seed';
 import { BACKGROUND_TASKS, runBackgroundMigrations } from '@/db/migrations/background';
 import { hasPin } from '@/core/pin';
+import { ensureFontsForLang } from '@/lib/fonts';
 import { defaultSettings } from '@/db/defaults';
 import { makeT, type TFunc } from '@/i18n';
 import { formatAmount, formatMoney } from '@/core/money';
@@ -210,6 +211,7 @@ export async function findOpenShift(userId: string): Promise<Shift | null> {
 }
 
 function applyDomSettings(settings: Settings): void {
+  ensureFontsForLang(settings.lang);
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = settings.theme;
   document.documentElement.lang = settings.lang;

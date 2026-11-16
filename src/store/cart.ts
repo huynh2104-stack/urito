@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { newId } from '@/core/id';
 import { computeLine, computeTotals, lineKey, type Totals } from '@/core/cart';
@@ -23,6 +24,7 @@ export interface CartState {
   orderCode: string;
   createdAt: number;
   items: OrderItem[];
+  qtyByProduct: Record<string, number>;
   type: OrderType;
   tableId: string | null;
   tableName: string;
@@ -61,6 +63,7 @@ const EMPTY = {
   orderCode: '',
   createdAt: 0,
   items: [] as OrderItem[],
+  qtyByProduct: {} as Record<string, number>,
   type: 'retail' as OrderType,
   tableId: null,
   tableName: '',
@@ -103,6 +106,14 @@ interface CartDraft {
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let draftUnsub: (() => void) | null = null;
 let suppressDraftSave = false;
+
+function computeQtyByProduct(items: OrderItem[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const i of items) {
+    map[i.productId] = normaliseQty((map[i.productId] ?? 0) + i.qty);
+  }
+  return map;
+}
 
 function recalc(item: OrderItem): OrderItem {
   const line = computeLine({
@@ -152,13 +163,14 @@ export const useCart = create<CartState>()((set, get) => ({
         }),
       );
     }
-    set({ items });
+    set({ items, qtyByProduct: computeQtyByProduct(items) });
   },
 
   setQty(lineId, qty) {
     const q = normaliseQty(qty);
     if (q <= 0) return get().removeLine(lineId);
-    set({ items: get().items.map((i) => (i.id === lineId ? recalc({ ...i, qty: q }) : i)) });
+    const items = get().items.map((i) => (i.id === lineId ? recalc({ ...i, qty: q }) : i));
+    set({ items, qtyByProduct: computeQtyByProduct(items) });
   },
 
   bumpQty(lineId, delta) {
@@ -168,7 +180,8 @@ export const useCart = create<CartState>()((set, get) => ({
   },
 
   removeLine(lineId) {
-    set({ items: get().items.filter((i) => i.id !== lineId) });
+    const items = get().items.filter((i) => i.id !== lineId);
+    set({ items, qtyByProduct: computeQtyByProduct(items) });
   },
 
   setLineDiscount(lineId, type, value) {
@@ -230,11 +243,13 @@ export const useCart = create<CartState>()((set, get) => ({
   },
 
   loadOrder(order) {
+      const items = order.items.map((i) => recalc(i));
     set({
       orderId: order.id,
       orderCode: order.code,
       createdAt: order.createdAt,
-      items: order.items.map((i) => recalc(i)),
+      items,
+      qtyByProduct: computeQtyByProduct(items),
       type: order.type,
       tableId: order.tableId,
       tableName: order.tableName,
@@ -303,11 +318,13 @@ export async function initCartDraft(now = Date.now()): Promise<boolean> {
 
   suppressDraftSave = true;
   try {
+    const items = draft.items.map((i) => recalc(i));
     useCart.setState({
       orderId: draft.orderId ?? null,
       orderCode: draft.orderCode ?? '',
       createdAt: draft.createdAt ?? 0,
-      items: draft.items.map((i) => recalc(i)),
+      items,
+      qtyByProduct: computeQtyByProduct(items),
       type: draft.type ?? 'retail',
       tableId: draft.tableId ?? null,
       tableName: draft.tableName ?? '',
@@ -351,7 +368,29 @@ export function cartTotals(cart: CartState, settings: Settings): Totals {
 }
 
 export function useCartTotals(): Totals {
-  const cart = useCart();
+  const items = useCart((s) => s.items);
+  const discountType = useCart((s) => s.discountType);
+  const discountValue = useCart((s) => s.discountValue);
+  const type = useCart((s) => s.type);
+  const pointsUsed = useCart((s) => s.pointsUsed);
   const settings = useApp((s) => s.settings);
-  return cartTotals(cart, settings);
+  return useMemo(
+    () =>
+      computeTotals({
+        items,
+        discountType,
+        discountValue,
+        serviceChargeRate: settings.serviceChargeRate,
+        taxMode: settings.taxMode,
+        taxRate: settings.taxRate,
+        taxRates: settings.taxRates,
+        taxRounding: settings.taxRounding,
+        orderType: type,
+        eatInRule: settings.eatInRule,
+        roundTo: settings.roundTo,
+        pointsUsed: settings.loyaltyEnabled ? pointsUsed : 0,
+        pointsValue: settings.loyaltyPointValue,
+      }),
+    [items, discountType, discountValue, type, pointsUsed, settings],
+  );
 }

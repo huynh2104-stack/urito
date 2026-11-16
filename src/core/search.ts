@@ -61,3 +61,42 @@ export function compareProductNames(a: Product, b: Product, lang: Lang): number 
 export function compareStrings(a: string, b: string, lang: Lang): number {
   return getCollator(lang).compare(a, b);
 }
+
+export interface IndexedProduct {
+  product: Product;
+  key: string;
+}
+
+export interface ProductSearchIndex {
+  entries: IndexedProduct[];
+  byBarcode: Map<string, Product>;
+  bySku: Map<string, Product>;
+}
+
+/** C-03: 商品リスト変更時に1度だけ検索キーとコードMapを構築し、入力ごとの全件正規化を排除する。 */
+export function buildProductSearchIndex(products: Product[]): ProductSearchIndex {
+  const byBarcode = new Map<string, Product>();
+  const bySku = new Map<string, Product>();
+  const entries = products.map((product) => {
+    if (product.barcode) byBarcode.set(normaliseCode(product.barcode), product);
+    if (product.sku) bySku.set(normaliseCode(product.sku), product);
+    const key = [
+      normaliseText(product.name),
+      product.kana ? normaliseText(product.kana) : '',
+      product.sku ? normaliseCode(product.sku) : '',
+      product.barcode ? normaliseCode(product.barcode) : '',
+    ]
+      .filter(Boolean)
+      .join('\t');
+    return { product, key };
+  });
+  return { entries, byBarcode, bySku };
+}
+
+/** C-03: 事前構築済みインデックスを用いて即時検索を実行する。 */
+export function searchIndexedProducts(index: ProductSearchIndex, query: string): Product[] {
+  const trimmed = query.trim();
+  if (!trimmed) return index.entries.map((e) => e.product);
+  const q = normaliseText(trimmed);
+  return index.entries.filter((e) => e.key.includes(q)).map((e) => e.product);
+}

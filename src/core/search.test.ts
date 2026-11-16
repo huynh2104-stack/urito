@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Product } from '@/db/types';
-import { compareProductNames, matchesProduct, normaliseCode, normaliseText } from './search';
+import {
+  buildProductSearchIndex,
+  compareProductNames,
+  matchesProduct,
+  normaliseCode,
+  normaliseText,
+  searchIndexedProducts,
+} from './search';
 
 function prod(over: Partial<Product>): Product {
   return {
@@ -58,5 +65,14 @@ describe('日本語かな・NFKC正規化検索とソート (D-05)', () => {
     const c = prod({ id: 'c', name: '蜜柑', kana: 'みかん' });
     const sorted = [a, b, c].sort((x, y) => compareProductNames(x, y, 'ja'));
     expect(sorted.map((x) => x.name)).toEqual(['飴', '蜜柑', '林檎']);
+  });
+
+  it('事前構築済みインデックス(C-03)でO(1)バーコード照合とかな検索が動作する', () => {
+    const p1 = prod({ id: '1', name: '牛乳 1L', kana: 'ぎゅうにゅう', sku: 'SKU-001', barcode: '2000000000019' });
+    const p2 = prod({ id: '2', name: '緑茶 525ml', kana: 'りょくちゃ', sku: 'SKU-002', barcode: '2000000000026' });
+    const idx = buildProductSearchIndex([p1, p2]);
+    expect(idx.byBarcode.get(normaliseCode('２００００００００００１９'))?.id).toBe('1');
+    expect(idx.bySku.get(normaliseCode('ｓｋｕ－００２'))?.id).toBe('2');
+    expect(searchIndexedProducts(idx, 'ｷﾞｭｳﾆｭｳ').map((p) => p.id)).toEqual(['1']);
   });
 });

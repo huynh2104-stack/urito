@@ -7,6 +7,7 @@ import type { PosView } from './viewOptions';
 import { useMoney, useT } from '@/store/app';
 import { formatQty } from '@/core/money';
 import { useApp } from '@/store/app';
+import { useCart } from '@/store/cart';
 import type { Category, Product } from '@/db/types';
 
 export function ProductGrid({
@@ -28,7 +29,6 @@ export function ProductGrid({
   onOpenCart,
   view,
   onView,
-  cartQty,
   reserved,
 }: {
   products: Product[];
@@ -50,7 +50,6 @@ export function ProductGrid({
   view: PosView;
   onView: (v: PosView) => void;
   /** Units of each product in the current cart, and held by parked tickets. */
-  cartQty: Map<string, number>;
   reserved: Map<string, number>;
 }) {
   const t = useT();
@@ -148,7 +147,6 @@ export function ProductGrid({
               onPick={onPick}
               priceText={money(p.price)}
               withImage={withImages}
-              inCart={cartQty.get(p.id) ?? 0}
               held={reserved.get(p.id) ?? 0}
             />
           ))}
@@ -173,18 +171,17 @@ const ProductTile = memo(function ProductTile({
   onPick,
   priceText,
   withImage,
-  inCart,
   held,
 }: {
   product: Product;
   onPick: (p: Product, source?: HTMLElement | null) => void;
   priceText: string;
   withImage: boolean;
-  inCart: number;
   held: number;
 }) {
   const t = useT();
   const lang = useApp((s) => s.settings.lang);
+  const inCart = useCart((s) => s.qtyByProduct[p.id] ?? 0);
   const taxMode = useApp((s) => s.settings.taxMode);
   const negativeStock = useApp((st) => st.settings.negativeStock);
   const tracked = p.trackStock && !p.isService;
