@@ -8,7 +8,7 @@ import { useApp, useMoney, useT } from '@/store/app';
 import { navigate } from '@/router';
 import { toast } from '@/store/ui';
 import { printDocument } from '@/print/PrintHost';
-import { removeTones } from '@/features/pos/PosPage';
+import { compareProductNames, matchesProduct } from '@/core/search';
 import type { Product } from '@/db/types';
 
 type LabelSize = 'roll-50x30' | 'roll-40x25' | 'a4-65';
@@ -37,6 +37,7 @@ export function LabelsPage() {
 
   const [search, setSearch] = useState('');
   const [copies, setCopies] = useState<Record<string, number>>({});
+  const lang = useApp((s) => s.settings.lang);
   const [size, setSize] = useState<LabelSize>('roll-50x30');
   const [showShop, setShowShop] = useState(true);
   const [showPrice, setShowPrice] = useState(true);
@@ -44,11 +45,10 @@ export function LabelsPage() {
   const products = useLiveQuery(async () => db.products.filter((p) => p.active).toArray(), [], [] as Product[]);
 
   const visible = useMemo(() => {
-    const q = removeTones(search.trim().toLowerCase());
     return products
-      .filter((p) => !q || removeTones(p.name.toLowerCase()).includes(q) || p.barcode.includes(search.trim()))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [products, search]);
+      .filter((p) => matchesProduct(p, search))
+      .sort((a, b) => compareProductNames(a, b, lang));
+  }, [products, search, lang]);
 
   const chosen = products.filter((p) => (copies[p.id] ?? 0) > 0);
   const totalLabels = chosen.reduce((s, p) => s + (copies[p.id] ?? 0), 0);

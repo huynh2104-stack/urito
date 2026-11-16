@@ -1,6 +1,7 @@
 import { dayKey, eachDay } from '@/core/date';
+import { localeTag } from '@/core/money';
 import { orderTaxLinesForDisplay } from '@/core/tax';
-import type { Expense, Order, Product, TaxLine } from '@/db/types';
+import type { Expense, Lang, Order, Product, TaxLine } from '@/db/types';
 
 export interface SalesSummary {
   revenue: number;
@@ -98,7 +99,13 @@ export interface SeriesPoint {
   secondary?: number;
 }
 
-export function revenueByDay(orders: Order[], from: number, to: number, refundOrders?: Order[]): SeriesPoint[] {
+export function revenueByDay(
+  orders: Order[],
+  from: number,
+  to: number,
+  refundOrders?: Order[],
+  lang: Lang = 'ja',
+): SeriesPoint[] {
   const sold = sellableOrders(orders);
   const buckets = new Map<string, number>();
   const profit = new Map<string, number>();
@@ -118,12 +125,12 @@ export function revenueByDay(orders: Order[], from: number, to: number, refundOr
       }
     }
   }
+  const dayFmt = new Intl.DateTimeFormat(localeTag(lang), { month: 'numeric', day: 'numeric' });
   return eachDay(from, to).map((ts) => {
     const k = dayKey(ts);
-    const d = new Date(ts);
     return {
       key: k,
-      label: `${d.getDate()}/${d.getMonth() + 1}`,
+      label: dayFmt.format(ts),
       value: buckets.get(k) ?? 0,
       secondary: profit.get(k) ?? 0,
     };

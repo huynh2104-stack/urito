@@ -69,8 +69,8 @@ describe('原子的連番採番と排他的設定更新 (B-03)', () => {
     }
 
     expect(new Set(codes).size).toBe(50);
-    expect(codes[0]).toMatch(/^HD[A-Z0-9]+-\d{6}-0001$/);
-    expect(codes[49]).toMatch(/^HD[A-Z0-9]+-\d{6}-0050$/);
+    expect(codes[0]).toMatch(/^ORD[A-Z0-9]+-\d{6}-0001$/);
+    expect(codes[49]).toMatch(/^ORD[A-Z0-9]+-\d{6}-0050$/);
     const saved = await db.settings.get('app');
     expect(saved?.shopName).toBe('店舗49');
     expect(saved?.backup.keep).toBe(20 + (49 % 5));

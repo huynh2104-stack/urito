@@ -11,7 +11,35 @@ export function pickColor(seed: number): string {
   return PALETTE[Math.abs(seed) % PALETTE.length];
 }
 
-export function defaultSettings(lang: Lang = 'vi', currency: CurrencyCode = 'VND'): Settings {
+export interface DocPrefixes {
+  order: Record<BusinessType, string>;
+  shift: string;
+  purchase: string;
+  customer: string;
+  sku: string;
+}
+
+/** D-03: 言語・地域に応じた既定の伝票・コード接頭辞を返す（vi は既存互換の接頭辞を維持）。 */
+export function docPrefixes(lang: Lang): DocPrefixes {
+  if (lang === 'vi') {
+    return {
+      order: { retail: 'HD', cafe: 'CF', restaurant: 'NH' },
+      shift: 'CA',
+      purchase: 'PN',
+      customer: 'KH',
+      sku: 'SP',
+    };
+  }
+  return {
+    order: { retail: 'ORD', cafe: 'ORD', restaurant: 'TBL' },
+    shift: 'SHF',
+    purchase: 'PO',
+    customer: 'CUS',
+    sku: 'SKU',
+  };
+}
+
+export function defaultSettings(lang: Lang = 'ja', currency: CurrencyCode = 'JPY'): Settings {
   const now = Date.now();
   return {
     id: 'app',
@@ -23,6 +51,7 @@ export function defaultSettings(lang: Lang = 'vi', currency: CurrencyCode = 'VND
     businessType: 'retail',
     currency,
     lang,
+    weekStartsOn: lang === 'ja' ? 0 : 1,
     theme: 'light',
     taxMode: lang === 'ja' ? 'inclusive' : 'none',
     taxRate: currency === 'JPY' ? 10 : 8,
@@ -39,7 +68,7 @@ export function defaultSettings(lang: Lang = 'vi', currency: CurrencyCode = 'VND
     printAfterPay: false,
     requireLogin: false,
     negativeStock: true,
-    orderPrefix: 'HD',
+    orderPrefix: docPrefixes(lang).order.retail,
     nextOrderNo: 1,
     loyaltyEnabled: false,
     loyaltyEarnPer: currency === 'VND' ? 10000 : 100,

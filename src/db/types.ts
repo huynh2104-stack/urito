@@ -49,6 +49,7 @@ export interface Settings {
   businessType: BusinessType;
   currency: CurrencyCode;
   lang: Lang;
+  weekStartsOn?: 0 | 1;
   theme: 'light' | 'dark';
   taxMode: TaxMode;
   taxRate: number;
@@ -118,6 +119,7 @@ export interface Product {
   sku: string;
   barcode: string;
   name: string;
+  kana?: string;
   categoryId: ID;
   price: number;
   cost: number;

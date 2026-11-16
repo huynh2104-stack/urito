@@ -741,4 +741,9 @@ export const en: Dictionary = {
   'pos.draftRestored': 'Restored unsaved cart draft.',
   'pwa.reloadConfirmTitle': 'Update available',
   'pwa.reloadConfirmMessage': 'Your cart has items in progress (saved as draft). Reload now to update?',
+  'products.kana': 'Reading / Kana',
+  'set.weekStartsOn': 'Week starts on',
+  'set.weekSunday': 'Sunday',
+  'set.weekMonday': 'Monday',
+  'tax.includedBadge': 'tax incl.',
 };

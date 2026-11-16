@@ -48,11 +48,16 @@ export function ReportsPage() {
   const money = useMoney();
   const settings = useApp((s) => s.settings);
 
+  const weekStartsOn = settings.weekStartsOn ?? (settings.lang === 'ja' ? 0 : 1);
   const [preset, setPreset] = useState<RangePreset>('this_month');
-  const [custom, setCustom] = useState(() => rangeOf('this_month'));
+  const [custom, setCustom] = useState(() => rangeOf('this_month', Date.now(), weekStartsOn));
   const [tab, setTab] = useState<TabKey>('overview');
 
-  const range = useMemo(() => (preset === 'custom' ? custom : rangeOf(preset)), [preset, custom]);
+  const [now] = useState(() => Date.now());
+  const range = useMemo(
+    () => (preset === 'custom' ? custom : rangeOf(preset, now, weekStartsOn)),
+    [preset, custom, now, weekStartsOn],
+  );
   const prev = useMemo(() => previousRange(range), [range]);
 
   const orders = useLiveQuery(
@@ -95,8 +100,8 @@ export function ReportsPage() {
     [prevOrders, prevRefundOrders, prev],
   );
   const byDay = useMemo(
-    () => revenueByDay(orders, range.from, range.to, refundOrders),
-    [orders, range.from, range.to, refundOrders],
+    () => revenueByDay(orders, range.from, range.to, refundOrders, settings.lang),
+    [orders, range.from, range.to, refundOrders, settings.lang],
   );
   const byHour = useMemo(() => revenueByHour(orders), [orders]);
   const top = useMemo(() => productStats(orders), [orders]);

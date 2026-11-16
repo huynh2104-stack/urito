@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Button, Field, Input, Modal, SearchInput } from '@/components/ui';
 import { db } from '@/db/db';
+import { docPrefixes } from '@/db/defaults';
 import { nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
 import { useApp, useMoney, useT } from '@/store/app';
 import { useCart } from '@/store/cart';
 import { toast } from '@/store/ui';
-import { removeTones } from './PosPage';
+import { normaliseCode, normaliseText } from '@/core/search';
 import type { Customer } from '@/db/types';
 
 export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
   const t = useT();
   const money = useMoney();
+  const lang = useApp((s) => s.settings.lang);
   const loyalty = useApp((s) => s.settings.loyaltyEnabled);
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -22,10 +24,11 @@ export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
   const customers = useLiveQuery(async () => db.customers.filter((c) => c.active).toArray(), [], []);
 
   const filtered = useMemo(() => {
-    const q = removeTones(search.trim().toLowerCase());
+    const q = normaliseText(search.trim());
+    const phoneQ = normaliseCode(search);
     const list = q
       ? customers.filter(
-          (c) => removeTones(c.name.toLowerCase()).includes(q) || c.phone.includes(search.trim()),
+          (c) => normaliseText(c.name).includes(q) || normaliseCode(c.phone).includes(phoneQ),
         )
       : customers;
     return list.sort((a, b) => b.orderCount - a.orderCount).slice(0, 60);
@@ -42,7 +45,7 @@ export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
       const seq = await nextSeq('customer');
       const row: Customer = {
         id: newId('cu'),
-        code: `KH${String(seq).padStart(4, '0')}`,
+        code: `${docPrefixes(lang).customer}${String(seq).padStart(4, '0')}`,
         name: name.trim(),
         phone: phone.trim(),
         address: '',

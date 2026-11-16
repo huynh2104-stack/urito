@@ -741,6 +741,11 @@ export const vi = {
   'pos.draftRestored': 'Đã khôi phục đơn hàng đang soạn dở.',
   'pwa.reloadConfirmTitle': 'Cập nhật phiên bản mới',
   'pwa.reloadConfirmMessage': 'Giỏ hàng hiện có món chưa thanh toán (đã được lưu nháp). Tải lại ứng dụng ngay?',
+  'products.kana': 'Tên đọc / Kana',
+  'set.weekStartsOn': 'Ngày đầu tuần',
+  'set.weekSunday': 'Chủ nhật',
+  'set.weekMonday': 'Thứ hai',
+  'tax.includedBadge': 'đã gồm thuế',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

@@ -12,13 +12,14 @@ import {
   Textarea,
 } from '@/components/ui';
 import { db } from '@/db/db';
+import { docPrefixes } from '@/db/defaults';
 import { nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
 import { formatDateTime } from '@/core/date';
 import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
-import { removeTones } from '@/features/pos/PosPage';
+import { normaliseCode, normaliseText } from '@/core/search';
 import { downloadCsv, timestampedName } from '@/services/csv';
 import { formatAmount } from '@/core/money';
 import type { Customer, Order } from '@/db/types';
@@ -41,10 +42,11 @@ export function CustomersPage() {
     let list = customers.filter((c) => c.active);
     if (filter === 'debt') list = list.filter((c) => c.debt > 0);
     if (filter === 'points') list = list.filter((c) => c.points > 0);
-    const q = removeTones(search.trim().toLowerCase());
+    const q = normaliseText(search.trim());
+    const phoneQ = normaliseCode(search);
     if (q) {
       list = list.filter(
-        (c) => removeTones(c.name.toLowerCase()).includes(q) || c.phone.includes(search.trim()),
+        (c) => normaliseText(c.name).includes(q) || normaliseCode(c.phone).includes(phoneQ),
       );
     }
     return list.sort((a, b) => b.totalSpent - a.totalSpent);
@@ -170,6 +172,7 @@ function CustomerForm({
   onClose: () => void;
 }) {
   const t = useT();
+  const lang = useApp((s) => s.settings.lang);
   const [draft, setDraft] = useState<Customer>(
     () =>
       customer ?? {
@@ -196,7 +199,8 @@ function CustomerForm({
   const save = async () => {
     if (!draft.name.trim()) return;
     await db.transaction('rw', [db.customers, db.kv], async () => {
-      const code = draft.code || `KH${String(await nextSeq('customer')).padStart(4, '0')}`;
+      const prefix = docPrefixes(lang).customer;
+      const code = draft.code || `${prefix}${String(await nextSeq('customer')).padStart(4, '0')}`;
       await db.customers.put({ ...draft, code, name: draft.name.trim(), updatedAt: Date.now() });
     });
     toast.success(t('common.saved'));

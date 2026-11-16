@@ -2,6 +2,7 @@ import { ProductThumb } from '@/components/ProductThumb';
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, Field, Input, Modal, NumberInput, SearchInput, Select, Stat, Tabs } from '@/components/ui';
 import { db } from '@/db/db';
+import { docPrefixes } from '@/db/defaults';
 import { getDeviceNo, nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatDateTime } from '@/core/date';
@@ -9,7 +10,7 @@ import { formatQty } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import { applyStockChanges, summariseStock } from '@/services/inventory';
-import { removeTones } from '@/features/pos/PosPage';
+import { matchesProduct } from '@/core/search';
 import { formatCode, newId } from '@/core/id';
 import { navigate } from '@/router';
 import type { Product, Purchase, StockMoveType, StockMovement } from '@/db/types';
@@ -62,7 +63,7 @@ export function InventoryPage() {
       const dev = await getDeviceNo();
       const row: Purchase = {
         id: newId('pu'),
-        code: formatCode('PN', seq, new Date(), dev),
+        code: formatCode(docPrefixes(lang).purchase, seq, new Date(), dev),
         supplierId: null,
         supplierName: '',
         items,
@@ -88,8 +89,7 @@ export function InventoryPage() {
     let list = products.filter((p) => p.active && p.trackStock && !p.isService);
     if (filter === 'low') list = list.filter((p) => p.minStock > 0 && p.stock <= p.minStock && p.stock > 0);
     if (filter === 'out') list = list.filter((p) => p.stock <= 0);
-    const q = removeTones(search.trim().toLowerCase());
-    if (q) list = list.filter((p) => removeTones(p.name.toLowerCase()).includes(q) || p.sku.toLowerCase().includes(q));
+    if (search.trim()) list = list.filter((p) => matchesProduct(p, search));
     return list.sort((a, b) => a.stock - b.stock);
   }, [products, filter, search]);
 

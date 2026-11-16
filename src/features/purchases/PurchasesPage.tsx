@@ -13,6 +13,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { db } from '@/db/db';
+import { docPrefixes } from '@/db/defaults';
 import { getDeviceNo, nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatCode, newId } from '@/core/id';
@@ -20,7 +21,7 @@ import { formatDateTime } from '@/core/date';
 import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
 import { receivePurchase } from '@/services/purchases';
-import { removeTones } from '@/features/pos/PosPage';
+import { matchesProduct } from '@/core/search';
 import type { Product, Purchase, PurchaseItem, Supplier } from '@/db/types';
 
 export function PurchasesPage() {
@@ -131,6 +132,7 @@ function PurchaseForm({
   const t = useT();
   const money = useMoney();
   const user = useApp((s) => s.user);
+  const lang = useApp((s) => s.settings.lang);
   const readOnly = purchase?.status === 'received';
 
   const [supplierId, setSupplierId] = useState(purchase?.supplierId ?? '');
@@ -144,11 +146,8 @@ function PurchaseForm({
   const subtotal = items.reduce((s, i) => s + i.total, 0);
 
   const matches = useMemo(() => {
-    const q = removeTones(search.trim().toLowerCase());
-    if (!q) return [];
-    return products
-      .filter((p) => removeTones(p.name.toLowerCase()).includes(q) || p.sku.toLowerCase().includes(q))
-      .slice(0, 8);
+    if (!search.trim()) return [];
+    return products.filter((p) => matchesProduct(p, search)).slice(0, 8);
   }, [products, search]);
 
   const addItem = (product: Product) => {
@@ -178,7 +177,9 @@ function PurchaseForm({
     );
 
   const buildPurchase = async (status: 'draft' | 'received'): Promise<Purchase> => {
-    const code = purchase?.code || formatCode('PN', await nextSeq('purchase'), new Date(), await getDeviceNo());
+    const code =
+      purchase?.code ||
+      formatCode(docPrefixes(lang).purchase, await nextSeq('purchase'), new Date(), await getDeviceNo());
     return {
       id: purchase?.id ?? newId('pu'),
       code,

@@ -21,6 +21,7 @@ import { CustomItemModal } from './CustomItemModal';
 import { Icon } from '@/components/Icon';
 import { flyToCart } from '@/lib/fly';
 import { DAY } from '@/core/date';
+import { compareProductNames, matchesProduct, normaliseCode, normaliseText } from '@/core/search';
 import { arrangeProducts, loadView, saveView, type PosView } from './viewOptions';
 import type { ModifierGroup, Product } from '@/db/types';
 
@@ -86,8 +87,8 @@ export function PosPage() {
   const heldCount = useLiveQuery(async () => db.orders.where('status').equals('open').count(), [], 0);
 
   const activeProducts = useMemo(
-    () => products.filter((p) => p.active).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name)),
-    [products],
+    () => products.filter((p) => p.active).sort((a, b) => a.sort - b.sort || compareProductNames(a, b, settings.lang)),
+    [products, settings.lang],
   );
 
   const modsById = useMemo(() => new Map(modifierGroups.map((g) => [g.id, g])), [modifierGroups]);
@@ -152,8 +153,9 @@ export function PosPage() {
     const qty = match ? Number(match[1].replace(',', '.')) : 1;
     const term = (match ? match[2] : raw).trim();
     if (!term) return false;
+    const normTerm = normaliseCode(term);
     const exact = activeProducts.find(
-      (p) => (p.barcode && p.barcode === term) || (p.sku && p.sku.toLowerCase() === term.toLowerCase()),
+      (p) => (p.barcode && normaliseCode(p.barcode) === normTerm) || (p.sku && normaliseCode(p.sku) === normTerm),
     );
     const matches = filterProducts(activeProducts, term);
     const target = exact ?? (matches.length === 1 ? matches[0] : null);
@@ -211,12 +213,12 @@ export function PosPage() {
   }, [cart.items.length, user, settings, shift]);
 
   const visible = useMemo(() => {
-    let list = arrangeProducts(activeProducts, view, sold);
+    let list = arrangeProducts(activeProducts, view, sold, settings.lang);
     if (categoryId === 'fav') list = list.filter((p) => p.favorite);
     else if (categoryId !== 'all') list = list.filter((p) => p.categoryId === categoryId);
     const term = search.replace(/^\s*\d+(?:[.,]\d+)?\s*[*xX]\s*/, '');
     return term.trim() ? filterProducts(list, term) : list;
-  }, [activeProducts, categoryId, search, view, sold]);
+  }, [activeProducts, categoryId, search, view, sold, settings.lang]);
 
   return (
     <div className="pos">
@@ -309,27 +311,10 @@ export function PosPage() {
   );
 }
 
+/** D-05: NFKC・かな統合・ベトナム語声調除去を含む商品検索を行う。 */
 export function filterProducts(products: Product[], term: string): Product[] {
-  const q = term.trim().toLowerCase();
-  if (!q) return products;
-  const normalised = removeTones(q);
-  return products.filter((p) => {
-    const name = p.name.toLowerCase();
-    return (
-      name.includes(q) ||
-      removeTones(name).includes(normalised) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.barcode.includes(q)
-    );
-  });
+  return products.filter((p) => matchesProduct(p, term));
 }
 
-/** Lets a cashier type "ca phe" and still find "Cà phê" - typing tones on a
- *  busy counter is slow, and this is how Vietnamese users expect search to work. */
-export function removeTones(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-}
+/** D-05: テキスト検索用正規化関数の互換エイリアス。 */
+export const removeTones = normaliseText;

@@ -161,14 +161,29 @@ export function SettingsPage() {
 
             <div className="divider" />
 
-            <div className="grid grid-2">
+            <div className="grid grid-3">
               <Field label={t('set.language')}>
-                <Select value={settings.lang} onChange={(e) => set('lang', e.target.value as Lang)}>
+                <Select
+                  value={settings.lang}
+                  onChange={(e) => {
+                    const nextLang = e.target.value as Lang;
+                    void updateSettings({ lang: nextLang, weekStartsOn: nextLang === 'ja' ? 0 : 1 });
+                  }}
+                >
                   {LANGUAGES.map((l) => (
                     <option key={l.code} value={l.code}>
                       {l.label}
                     </option>
                   ))}
+                </Select>
+              </Field>
+              <Field label={t('set.weekStartsOn')}>
+                <Select
+                  value={String(settings.weekStartsOn ?? (settings.lang === 'ja' ? 0 : 1))}
+                  onChange={(e) => set('weekStartsOn', Number(e.target.value) === 0 ? 0 : 1)}
+                >
+                  <option value="0">{t('set.weekSunday')}</option>
+                  <option value="1">{t('set.weekMonday')}</option>
                 </Select>
               </Field>
               <Field label={t('set.theme')}>

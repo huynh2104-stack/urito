@@ -7,7 +7,7 @@ import { formatAmount, formatQty } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
 import { downloadCsv, timestampedName } from '@/services/csv';
-import { removeTones } from '@/features/pos/PosPage';
+import { compareProductNames, matchesProduct } from '@/core/search';
 import { ProductForm } from './ProductForm';
 import { CategoryManager } from './CategoryManager';
 import { ModifierManager } from './ModifierManager';
@@ -35,19 +35,13 @@ export function ProductsPage() {
   const catName = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
 
   const visible = useMemo(() => {
-    let list = [...products].sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
+    let list = [...products].sort((a, b) => a.sort - b.sort || compareProductNames(a, b, settings.lang));
     if (categoryId !== 'all') list = list.filter((p) => p.categoryId === categoryId);
-    const q = removeTones(search.trim().toLowerCase());
-    if (q) {
-      list = list.filter(
-        (p) =>
-          removeTones(p.name.toLowerCase()).includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.barcode.includes(search.trim()),
-      );
+    if (search.trim()) {
+      list = list.filter((p) => matchesProduct(p, search));
     }
     return list;
-  }, [products, categoryId, search]);
+  }, [products, categoryId, search, settings.lang]);
 
   const remove = async (product: Product) => {
     const used = await db.orders.filter((o) => o.items.some((i) => i.productId === product.id)).count();

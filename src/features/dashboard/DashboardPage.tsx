@@ -58,7 +58,10 @@ export function DashboardPage() {
     () => summarise(yesterdayOrders, [], refundOrders, yesterday),
     [yesterdayOrders, refundOrders, yesterday],
   );
-  const series = useMemo(() => revenueByDay(orders, since, now, refundOrders), [orders, since, now, refundOrders]);
+  const series = useMemo(
+    () => revenueByDay(orders, since, now, refundOrders, lang),
+    [orders, since, now, refundOrders, lang],
+  );
   const top = useMemo(() => productStats(todayOrders).slice(0, 5), [todayOrders]);
   const stock = useMemo(() => summariseStock(products), [products]);
 

@@ -33,10 +33,10 @@ export function endOfDay(ts: number | Date): number {
 }
 
 /** Weeks start on Monday - matches how VN and JP shops read a week. */
-export function startOfWeek(ts: number | Date): number {
+export function startOfWeek(ts: number | Date, weekStartsOn: 0 | 1 = 1): number {
   const d = new Date(startOfDay(ts));
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day);
+  const diff = (d.getDay() - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - diff);
   return d.getTime();
 }
 
@@ -54,16 +54,16 @@ export function startOfYear(ts: number | Date): number {
   return new Date(new Date(ts).getFullYear(), 0, 1).getTime();
 }
 
-export function rangeOf(preset: RangePreset, now = Date.now()): DateRange {
+export function rangeOf(preset: RangePreset, now = Date.now(), weekStartsOn: 0 | 1 = 1): DateRange {
   switch (preset) {
     case 'today':
       return { from: startOfDay(now), to: endOfDay(now) };
     case 'yesterday':
       return { from: startOfDay(now - DAY), to: endOfDay(now - DAY) };
     case 'this_week':
-      return { from: startOfWeek(now), to: endOfDay(now) };
+      return { from: startOfWeek(now, weekStartsOn), to: endOfDay(now) };
     case 'last_week': {
-      const start = startOfWeek(now) - 7 * DAY;
+      const start = startOfWeek(now, weekStartsOn) - 7 * DAY;
       return { from: start, to: endOfDay(start + 6 * DAY) };
     }
     case 'this_month':

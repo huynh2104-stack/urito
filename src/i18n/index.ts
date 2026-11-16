@@ -36,8 +36,7 @@ export function makeT(lang: Lang): TFunc {
 
 /** Best-effort guess from the browser, used only before onboarding. */
 export function detectLang(): Lang {
-  const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'vi';
-  if (nav.startsWith('ja')) return 'ja';
+  const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'ja';
   if (nav.startsWith('vi')) return 'vi';
-  return 'en';
+  return 'ja';
 }

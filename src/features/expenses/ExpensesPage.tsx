@@ -39,11 +39,13 @@ export function ExpensesPage() {
   const money = useMoney();
   const settings = useApp((s) => s.settings);
 
+  const weekStartsOn = settings.weekStartsOn ?? (settings.lang === 'ja' ? 0 : 1);
   const [preset, setPreset] = useState<RangePreset>('this_month');
-  const [custom, setCustom] = useState(() => rangeOf('this_month'));
+  const [custom, setCustom] = useState(() => rangeOf('this_month', Date.now(), weekStartsOn));
   const [editing, setEditing] = useState<Expense | 'new' | null>(null);
 
-  const range = preset === 'custom' ? custom : rangeOf(preset);
+  const [now] = useState(() => Date.now());
+  const range = preset === 'custom' ? custom : rangeOf(preset, now, weekStartsOn);
   const expenses = useLiveQuery(
     async () =>
       (await db.expenses.where('at').between(range.from, range.to, true, true).toArray()).sort(

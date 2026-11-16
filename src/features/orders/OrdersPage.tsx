@@ -35,14 +35,16 @@ export function OrdersPage() {
   const canSeeAll = useCan('viewAllOrders');
   const route = useRoute();
 
+  const weekStartsOn = settings.weekStartsOn ?? (settings.lang === 'ja' ? 0 : 1);
   const [preset, setPreset] = useState<RangePreset>('today');
-  const [custom, setCustom] = useState(() => rangeOf('today'));
+  const [custom, setCustom] = useState(() => rangeOf('today', Date.now(), weekStartsOn));
   const [status, setStatus] = useState<'all' | OrderStatus>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Order | null>(null);
 
-  const range = preset === 'custom' ? custom : rangeOf(preset);
+  const [now] = useState(() => Date.now());
+  const range = preset === 'custom' ? custom : rangeOf(preset, now, weekStartsOn);
 
   const orders = useLiveQuery(
     async () => {

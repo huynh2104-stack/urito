@@ -1,4 +1,5 @@
 import { db } from '@/db/db';
+import { docPrefixes } from '@/db/defaults';
 import { getDeviceNo, nextSeq } from '@/db/seq';
 import { formatCode, newId } from '@/core/id';
 import type { CashMovement, Expense, Order, Refund, Shift, User } from '@/db/types';
@@ -93,13 +94,15 @@ export async function loadShiftData(shift: Shift): Promise<{
 }
 
 export async function openShift(user: User, openingCash: number, note = ''): Promise<Shift> {
-  return db.transaction('rw', [db.shifts, db.kv], async () => {
+  return db.transaction('rw', [db.shifts, db.kv, db.settings], async () => {
     const now = Date.now();
     const seq = await nextSeq('shift');
     const deviceNo = await getDeviceNo();
+    const settings = await db.settings.get('app');
+    const prefix = docPrefixes(settings?.lang ?? 'ja').shift;
     const shift: Shift = {
       id: newId('sh'),
-      code: formatCode('CA', seq, new Date(now), deviceNo),
+      code: formatCode(prefix, seq, new Date(now), deviceNo),
       userId: user.id,
       userName: user.name,
       openedAt: now,

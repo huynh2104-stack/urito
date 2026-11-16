@@ -185,6 +185,7 @@ const ProductTile = memo(function ProductTile({
 }) {
   const t = useT();
   const lang = useApp((s) => s.settings.lang);
+  const taxMode = useApp((s) => s.settings.taxMode);
   const negativeStock = useApp((st) => st.settings.negativeStock);
   const tracked = p.trackStock && !p.isService;
   // Live figure: what is on the shelf minus what this cart and parked tickets
@@ -220,7 +221,16 @@ const ProductTile = memo(function ProductTile({
         </span>
         <span className="prod-name">{p.name}</span>
         {p.sku && <span className="prod-sku">{p.sku}</span>}
-        <span className="prod-price">{priceText}</span>
+        <span className="prod-price">
+          {priceText}
+          {lang === 'ja' && taxMode === 'inclusive' && (
+            <span className="tiny dim">
+              {' '}
+              {t('tax.includedBadge')}
+              {p.taxCategory === 'reduced' ? '※' : ''}
+            </span>
+          )}
+        </span>
         {badge}
       </button>
     );
@@ -244,7 +254,16 @@ const ProductTile = memo(function ProductTile({
       <span className="prod-info">
         <span className="prod-name">{p.name}</span>
         {p.sku && <span className="prod-sku">{p.sku}</span>}
-        <span className="prod-price">{priceText}</span>
+        <span className="prod-price">
+          {priceText}
+          {lang === 'ja' && taxMode === 'inclusive' && (
+            <span className="tiny dim">
+              {' '}
+              {t('tax.includedBadge')}
+              {p.taxCategory === 'reduced' ? '※' : ''}
+            </span>
+          )}
+        </span>
       </span>
       {badge}
     </button>

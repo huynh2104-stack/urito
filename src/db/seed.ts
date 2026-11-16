@@ -1,6 +1,6 @@
 import { formatCode, newId } from '@/core/id';
 import { db } from './db';
-import { PALETTE, defaultOwner, defaultSettings, ORDER_PREFIX } from './defaults';
+import { docPrefixes, PALETTE, defaultOwner, defaultSettings } from './defaults';
 import type {
   Area,
   BusinessType,
@@ -224,7 +224,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
     ...defaultSettings(opts.lang, opts.currency),
     shopName: opts.shopName,
     businessType: opts.businessType,
-    orderPrefix: ORDER_PREFIX[opts.businessType],
+    orderPrefix: docPrefixes(opts.lang).order[opts.businessType],
     serviceChargeRate: opts.businessType === 'restaurant' ? 0 : 0,
     onboarded: true,
   };
@@ -317,7 +317,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
 
       const walkIn: Customer = {
         id: newId('cu'),
-        code: 'KH0001',
+        code: `${docPrefixes(opts.lang).customer}0001`,
         name: opts.lang === 'ja' ? '常連のお客様' : opts.lang === 'vi' ? 'Khách quen' : 'Regular customer',
         phone: '',
         address: '',

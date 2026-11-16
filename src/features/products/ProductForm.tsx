@@ -13,7 +13,7 @@ import {
 import { db } from '@/db/db';
 import { nextSeq } from '@/db/seq';
 import { newId } from '@/core/id';
-import { PALETTE } from '@/db/defaults';
+import { docPrefixes, PALETTE } from '@/db/defaults';
 import { useApp, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import { applyStockChanges } from '@/services/inventory';
@@ -28,6 +28,7 @@ const blank = (): Product => ({
   sku: '',
   barcode: '',
   name: '',
+  kana: '',
   categoryId: '',
   price: 0,
   cost: 0,
@@ -60,6 +61,7 @@ export function ProductForm({
 }) {
   const t = useT();
   const user = useApp((s) => s.user);
+  const lang = useApp((s) => s.settings.lang);
   const isNew = !product;
   const [draft, setDraft] = useState<Product>(() => product ?? blank());
   const [busy, setBusy] = useState(false);
@@ -83,7 +85,7 @@ export function ProductForm({
 
   const makeSku = async () => {
     const seq = await nextSeq('sku');
-    set('sku', `SP${String(seq).padStart(4, '0')}`);
+    set('sku', `${docPrefixes(lang).sku}${String(seq).padStart(4, '0')}`);
   };
 
   const margin = draft.price > 0 ? ((draft.price - draft.cost) / draft.price) * 100 : 0;
@@ -95,6 +97,7 @@ export function ProductForm({
       const next: Product = {
         ...draft,
         name: draft.name.trim(),
+        kana: draft.kana?.trim() || '',
         sku: draft.sku.trim(),
         barcode: draft.barcode.trim(),
         updatedAt: Date.now(),
@@ -202,9 +205,12 @@ export function ProductForm({
             />
           </label>
           <div className="col gap-12 grow">
-        <div className="grid grid-2">
+        <div className="grid grid-3">
           <Field label={t('common.name')} required>
             <Input initialFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
+          </Field>
+          <Field label={t('products.kana')}>
+            <Input value={draft.kana ?? ''} onChange={(e) => set('kana', e.target.value)} />
           </Field>
           <Field label={t('common.category')}>
             <Select value={draft.categoryId} onChange={(e) => set('categoryId', e.target.value)}>

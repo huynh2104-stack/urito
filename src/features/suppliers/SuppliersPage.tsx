@@ -3,27 +3,29 @@ import { Button, EmptyState, Field, Input, Modal, SearchInput, Stat, Textarea } 
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
-import { useMoney, useT } from '@/store/app';
+import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
-import { removeTones } from '@/features/pos/PosPage';
+import { compareStrings, normaliseCode, normaliseText } from '@/core/search';
 import { navigate } from '@/router';
 import type { Supplier } from '@/db/types';
 
 export function SuppliersPage() {
   const t = useT();
   const money = useMoney();
+  const lang = useApp((s) => s.settings.lang);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Supplier | 'new' | null>(null);
 
   const suppliers = useLiveQuery(async () => db.suppliers.toArray(), [], []);
 
   const visible = useMemo(() => {
-    const q = removeTones(search.trim().toLowerCase());
+    const q = normaliseText(search.trim());
+    const phoneQ = normaliseCode(search);
     return suppliers
       .filter((s) => s.active)
-      .filter((s) => !q || removeTones(s.name.toLowerCase()).includes(q) || s.phone.includes(search.trim()))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [suppliers, search]);
+      .filter((s) => !q || normaliseText(s.name).includes(q) || normaliseCode(s.phone).includes(phoneQ))
+      .sort((a, b) => compareStrings(a.name, b.name, lang));
+  }, [suppliers, search, lang]);
 
   const totalDebt = visible.reduce((s, x) => s + x.debt, 0);
 
