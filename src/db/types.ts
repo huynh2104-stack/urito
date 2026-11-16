@@ -48,6 +48,7 @@ export interface Settings {
   logo: string;
   businessType: BusinessType;
   currency: CurrencyCode;
+  exchangeRates?: Partial<Record<CurrencyCode, number>>;
   lang: Lang;
   weekStartsOn?: 0 | 1;
   theme: 'light' | 'dark';
@@ -135,6 +136,8 @@ export interface Product {
   favorite: boolean;
   taxCategory?: TaxCategory;
   imageRev?: number;
+  i18n?: Partial<Record<Lang, { name?: string; description?: string; unit?: string }>>;
+  prices?: Partial<Record<CurrencyCode, number>>;
   sort: number;
   createdAt: number;
   updatedAt: number;
@@ -289,6 +292,8 @@ export interface Order {
   paidAt: number;
   voidedAt: number;
   voidReason: string;
+  channel?: 'pos' | 'shopify' | 'ec';
+  externalId?: string;
 }
 
 /* ---------------------------------------------------------------- inventory */

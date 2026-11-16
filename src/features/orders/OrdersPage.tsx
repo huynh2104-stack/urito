@@ -9,6 +9,8 @@ import { summarise } from '@/services/reports';
 import { downloadCsv, timestampedName } from '@/services/csv';
 import { formatAmount } from '@/core/money';
 import { OrderDetail } from './OrderDetail';
+import { importEcOrders, parseEcOrdersCsv, type EcImportResult, type ParsedEcOrder } from '@/services/ecImport';
+import { toast } from '@/store/ui';
 import { RANGE_PRESETS, RangePicker } from '@/features/reports/RangePicker';
 import type { Order, OrderStatus } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
@@ -42,6 +44,7 @@ export function OrdersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Order | null>(null);
+  const [importingEc, setImportingEc] = useState(false);
 
   const [now] = useState(() => Date.now());
   const range = preset === 'custom' ? custom : rangeOf(preset, now, weekStartsOn);
@@ -146,9 +149,14 @@ export function OrdersPage() {
             })}
           </div>
         </div>
-        <Button icon="download" onClick={exportCsv} disabled={!visible.length}>
-          {t('orders.exportCsv')}
-        </Button>
+        <div className="row gap-8">
+          <Button icon="upload" onClick={() => setImportingEc(true)}>
+            {t('orders.importEc')}
+          </Button>
+          <Button icon="download" onClick={exportCsv} disabled={!visible.length}>
+            {t('orders.exportCsv')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-4 mb-16">
@@ -198,7 +206,12 @@ export function OrdersPage() {
               <tbody>
                 {paged.map((order) => (
                   <tr key={order.id} className="clickable" onClick={() => setSelected(order)}>
-                    <td className="strong">{order.code || '—'}</td>
+                    <td className="strong">
+                      {order.code || '—'}
+                      {order.channel && order.channel !== 'pos' && (
+                        <span className="badge badge-info ml-4">{order.channel.toUpperCase()}</span>
+                      )}
+                    </td>
                     <td className="nowrap">{formatDateTime(order.paidAt || order.createdAt, settings.lang)}</td>
                     <td className="truncate">
                       {order.customerName || t('pos.walkIn')}
@@ -237,6 +250,78 @@ export function OrdersPage() {
           <OrderDetail order={selected} onChanged={(next) => setSelected(next)} onClose={() => setSelected(null)} />
         </Modal>
       )}
+      {importingEc && <EcImportModal onClose={() => setImportingEc(false)} />}
     </div>
+  );
+}
+
+
+function EcImportModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const settings = useApp((s) => s.settings);
+  const user = useApp((s) => s.user);
+  const [parsed, setParsed] = useState<ParsedEcOrder[]>([]);
+  const [result, setResult] = useState<EcImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onFile = async (file: File) => {
+    setResult(null);
+    const text = await file.text();
+    setParsed(parseEcOrdersCsv(text, { currency: settings.currency }));
+  };
+
+  const commit = async () => {
+    if (!parsed.length) return;
+    setBusy(true);
+    try {
+      const res = await importEcOrders(parsed, { user, settings });
+      setResult(res);
+      toast.success(t('orders.ecSummary', { imported: res.imported, skipped: res.skippedDuplicates }));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="lg"
+      title={t('orders.importEc')}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.close')}</Button>
+          <Button variant="primary" disabled={!parsed.length || busy} onClick={() => void commit()}>
+            {t('common.import')} ({parsed.length})
+          </Button>
+        </>
+      }
+    >
+      <div className="col gap-12">
+        <div className="callout">{t('orders.ecHint')}</div>
+        <input
+          className="input"
+          type="file"
+          accept=".csv,text/csv"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void onFile(f);
+          }}
+        />
+        {parsed.length > 0 && <div className="badge badge-info">{t('orders.ecPreviewCount', { n: parsed.length })}</div>}
+        {result && (
+          <div className="col gap-8">
+            <div className="callout callout-success">
+              {t('orders.ecSummary', { imported: result.imported, skipped: result.skippedDuplicates })}
+            </div>
+            {result.unresolvedSkus.length > 0 && (
+              <div className="callout callout-warn">
+                {t('orders.ecUnresolved', { skus: result.unresolvedSkus.join(', ') })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

@@ -1,8 +1,11 @@
+import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
+import { db } from '@/db/db';
 import { defaultSettings } from '@/db/defaults';
 import { sampleOrder } from '@/features/settings/sampleOrder';
 import { orderTaxLinesForDisplay } from '@/core/tax';
-import { extractDeviceNo, isReducedTaxItem } from './Receipt';
+import { translate } from '@/i18n';
+import { extractDeviceNo, isReducedTaxItem, localizeOrderForPrint } from './Receipt';
 
 describe('適格簡易請求書(インボイス)ヘルパーと内訳計算 (D-02)', () => {
   it('伝票番号からレジ端末番号を接頭辞に依存せず正しく抽出できる', () => {
@@ -33,5 +36,40 @@ describe('適格簡易請求書(インボイス)ヘルパーと内訳計算 (D-0
     expect(lines[0].tax).toBe(81);
     expect(lines[1].gross).toBe(380);
     expect(lines[1].tax).toBe(28);
+  });
+
+  it('F-02: localizeOrderForPrint により指定言語のレシート辞書と商品の多言語名が適用される', async () => {
+    await db.open();
+    await db.products.clear();
+    const settings = defaultSettings('ja', 'JPY');
+    const order = sampleOrder(settings);
+    const targetId = order.items[0].productId;
+    await db.products.put({
+      id: targetId,
+      sku: 'SKU-LOC',
+      barcode: '',
+      name: order.items[0].name,
+      categoryId: '',
+      price: 450,
+      cost: 150,
+      unit: '杯',
+      trackStock: false,
+      stock: 0,
+      minStock: 0,
+      isService: false,
+      active: true,
+      color: '#000',
+      image: '',
+      modifierGroupIds: [],
+      favorite: false,
+      i18n: { en: { name: 'Cafe Latte' }, vi: { name: 'Cà phê sữa' } },
+      sort: 0,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    const enOrder = await localizeOrderForPrint(order, 'en');
+    expect(enOrder.items[0].name).toBe('Cafe Latte');
+    expect(translate('en', 'rc.invoice')).toBe('SALES INVOICE');
   });
 });

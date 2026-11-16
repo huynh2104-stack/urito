@@ -75,4 +75,16 @@ describe('日本語かな・NFKC正規化検索とソート (D-05)', () => {
     expect(idx.bySku.get(normaliseCode('ｓｋｕ－００２'))?.id).toBe('2');
     expect(searchIndexedProducts(idx, 'ｷﾞｭｳﾆｭｳ').map((p) => p.id)).toEqual(['1']);
   });
+
+  it('F-02: 多言語登録された i18n 商品名でも検索とインデックス検索が一致する', () => {
+    const coffee = prod({
+      id: 'p_ml',
+      name: 'ブレンドコーヒー',
+      i18n: { en: { name: 'Blend Coffee' }, vi: { name: 'Cà phê pha máy' } },
+    });
+    expect(matchesProduct(coffee, 'blend coffee')).toBe(true);
+    expect(matchesProduct(coffee, 'ca phe pha may')).toBe(true);
+    const idx = buildProductSearchIndex([coffee]);
+    expect(searchIndexedProducts(idx, 'Blend').map((p) => p.id)).toEqual(['p_ml']);
+  });
 });

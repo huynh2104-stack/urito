@@ -1,0 +1,6 @@
+Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Cost per item,Status
+urito-green-tea,緑茶 500ml,<p>国産茶葉使用のペットボトル緑茶</p>,うりと商店,飲料,飲料,定番,TRUE,Title,Default Title,R-0002,500,shopify,24,deny,manual,130,,TRUE,TRUE,4900000000023,https://example.com/tea.jpg,75,active
+urito-coffee-drip,ドリップコーヒー 10袋,<p>深煎り・中煎りの2種</p>,うりと商店,食品,コーヒー,人気,TRUE,焙煎,中煎り,R-0101,150,shopify,18,deny,manual,680,,TRUE,TRUE,4900000001013,,400,active
+urito-coffee-drip,,,,,コーヒー,,TRUE,,深煎り,R-0102,150,shopify,12,deny,manual,720,,TRUE,TRUE,4900000001020,,420,active
+urito-coffee-drip,,,,,,,,,,,,,,,,,,,,,https://example.com/coffee-sub.jpg,,active
+urito-gift-wrap,ギフトラッピングサービス,<p>包装料</p>,うりと商店,サービス,サービス,,TRUE,Title,Default Title,R-0901,0,,0,deny,manual,200,,FALSE,FALSE,,,,draft

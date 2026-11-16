@@ -1,9 +1,10 @@
 import { formatDateTime } from '@/core/date';
 import { formatAmount, formatQty } from '@/core/money';
 import { effectiveTaxRateBp, orderTaxLinesForDisplay } from '@/core/tax';
-import { useApp, useT } from '@/store/app';
-import type { Order, PayMethod } from '@/db/types';
-import type { TranslationKey } from '@/i18n';
+import { db } from '@/db/db';
+import { useApp } from '@/store/app';
+import type { Lang, Order, PayMethod } from '@/db/types';
+import { ensureLangDict, makeT, type TranslationKey } from '@/i18n';
 
 const METHOD_KEY: Record<PayMethod, TranslationKey> = {
   cash: 'pay.cash',
@@ -38,18 +39,38 @@ export function isReducedTaxItem(
 }
 
 /** サーマルレシートおよび日本向け適格簡易請求書（軽減税率 ※・税率別内訳・登録番号対応）。 */
+/** F-02: レシート印字言語に合わせて辞書を先読みし、商品の多言語登録名を適用した伝票を返す。 */
+export async function localizeOrderForPrint(order: Order, targetLang: Lang): Promise<Order> {
+  await ensureLangDict(targetLang);
+  const ids = [...new Set(order.items.map((i) => i.productId).filter(Boolean))];
+  if (!ids.length) return order;
+  const prods = await db.products.bulkGet(ids);
+  const nameMap = new Map<string, string>();
+  prods.forEach((p) => {
+    const loc = p?.i18n?.[targetLang]?.name?.trim();
+    if (p && loc) nameMap.set(p.id, loc);
+  });
+  if (!nameMap.size) return order;
+  return {
+    ...order,
+    items: order.items.map((i) => ({ ...i, name: nameMap.get(i.productId) ?? i.name })),
+  };
+}
+
 export function Receipt({
   order,
   provisional = false,
   preview = false,
+  langOverride,
 }: {
   order: Order;
   provisional?: boolean;
   preview?: boolean;
+  langOverride?: Lang;
 }) {
-  const t = useT();
   const settings = useApp((s) => s.settings);
-  const lang = settings.lang;
+  const lang = langOverride ?? settings.lang;
+  const t = makeT(lang);
   const m = (v: number) => formatAmount(v, settings.currency, lang);
 
   const hasTransfer = order.payments.some((p) => p.method === 'transfer' || p.method === 'qr');

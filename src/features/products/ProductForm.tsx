@@ -22,7 +22,7 @@ import { invalidateProductThumb, useThumb } from '@/lib/thumbCache';
 import { generateInternalBarcode } from '@/lib/barcode';
 import { Icon } from '@/components/Icon';
 import { CameraScanner } from '@/components/CameraScanner';
-import type { Category, ModifierGroup, Product, TaxCategory } from '@/db/types';
+import type { Category, CurrencyCode, Lang, ModifierGroup, Product, TaxCategory } from '@/db/types';
 
 const blank = (): Product => ({
   id: newId('p'),
@@ -87,6 +87,21 @@ export function ProductForm({
 
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  const setI18n = (targetLang: Lang, field: 'name' | 'description', value: string) =>
+    setDraft((d) => ({
+      ...d,
+      i18n: {
+        ...d.i18n,
+        [targetLang]: { ...d.i18n?.[targetLang], [field]: value },
+      },
+    }));
+
+  const setAltPrice = (curr: CurrencyCode, value: number) =>
+    setDraft((d) => ({
+      ...d,
+      prices: { ...d.prices, [curr]: value },
+    }));
 
   const pickImage = async (file: File) => {
     try {
@@ -388,6 +403,36 @@ export function ProductForm({
             </div>
           </Field>
         )}
+
+        <details className="card card-pad">
+          <summary className="strong small clickable">{t('products.multilangSection')}</summary>
+          <div className="col gap-12 mt-12">
+            <div className="grid grid-3">
+              <Field label={t('products.nameJa')}>
+                <Input value={draft.i18n?.ja?.name ?? ''} onChange={(e) => setI18n('ja', 'name', e.target.value)} />
+              </Field>
+              <Field label={t('products.nameEn')}>
+                <Input value={draft.i18n?.en?.name ?? ''} onChange={(e) => setI18n('en', 'name', e.target.value)} />
+              </Field>
+              <Field label={t('products.nameVi')}>
+                <Input value={draft.i18n?.vi?.name ?? ''} onChange={(e) => setI18n('vi', 'name', e.target.value)} />
+              </Field>
+            </div>
+            <Field label={t('products.description')}>
+              <Input
+                value={draft.i18n?.[lang]?.description ?? ''}
+                onChange={(e) => setI18n(lang, 'description', e.target.value)}
+              />
+            </Field>
+            <div className="grid grid-3">
+              {(['JPY', 'USD', 'VND'] as CurrencyCode[]).map((c) => (
+                <Field key={c} label={t('products.altPrice', { currency: c })}>
+                  <MoneyInput value={draft.prices?.[c] ?? 0} onChange={(v) => setAltPrice(c, v)} />
+                </Field>
+              ))}
+            </div>
+          </div>
+        </details>
 
         <div className="grid grid-2">
           <Field label={t('common.color')}>

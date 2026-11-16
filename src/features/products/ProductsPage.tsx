@@ -4,10 +4,12 @@ import { Icon } from '@/components/Icon';
 import { ProductThumb } from '@/components/ProductThumb';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
-import { formatAmount, formatQty } from '@/core/money';
+import { formatQty } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
 import { downloadCsv, timestampedName } from '@/services/csv';
+import { exportShopifyCsv } from '@/services/exchange/shopify';
+import { exportUritoCsv } from '@/services/exchange/urito';
 import { compareProductNames, matchesProduct } from '@/core/search';
 import { ProductForm } from './ProductForm';
 import { CategoryManager } from './CategoryManager';
@@ -60,31 +62,32 @@ export function ProductsPage() {
   };
 
   const exportCsv = () => {
-    const rows: (string | number)[][] = [
-      [
-        t('common.name'),
-        t('common.price'),
-        t('common.cost'),
-        t('common.category'),
-        t('products.sku'),
-        t('products.barcode'),
-        t('inv.currentStock'),
-        t('common.unit'),
-        t('products.minStock'),
-      ],
-      ...visible.map((p) => [
-        p.name,
-        formatAmount(p.price, settings.currency, 'en'),
-        formatAmount(p.cost, settings.currency, 'en'),
-        catName.get(p.categoryId) ?? '',
-        p.sku,
-        p.barcode,
-        p.stock,
-        p.unit,
-        p.minStock,
-      ]),
+    const headers = [
+      t('common.name'),
+      t('common.price'),
+      t('common.cost'),
+      t('common.category'),
+      t('products.sku'),
+      t('products.barcode'),
+      t('inv.currentStock'),
+      t('common.unit'),
+      t('products.minStock'),
     ];
-    downloadCsv(timestampedName('urito-products'), rows);
+    downloadCsv(
+      timestampedName('urito-products'),
+      exportUritoCsv(visible, { currency: settings.currency, categoryNames: catName }, headers),
+    );
+  };
+
+  const exportShopify = () => {
+    downloadCsv(
+      timestampedName('shopify-products'),
+      exportShopifyCsv(visible, {
+        currency: settings.currency,
+        categoryNames: catName,
+        shopName: settings.shopName,
+      }),
+    );
   };
 
   return (
@@ -105,6 +108,9 @@ export function ProductsPage() {
           </Button>
           <Button icon="download" onClick={exportCsv}>
             <span className="hide-sm">{t('common.export')}</span>
+          </Button>
+          <Button icon="download" onClick={exportShopify}>
+            <span className="hide-sm">{t('products.exportShopify')}</span>
           </Button>
           <Button variant="primary" icon="plus" onClick={() => setEditing('new')}>
             {t('products.new')}

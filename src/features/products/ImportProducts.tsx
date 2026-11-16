@@ -5,57 +5,15 @@ import { db } from '@/db/db';
 import { newId } from '@/core/id';
 import { parseCsv } from '@/services/csv';
 import { readXlsx } from '@/services/xlsx';
-import { parseMoney } from '@/core/money';
 import { PALETTE } from '@/db/defaults';
-import { removeTones } from '@/features/pos/PosPage';
+import { isShopifyProductCsv, parseShopifyProductCsv } from '@/services/exchange/shopify';
+import { parseUritoProductTable } from '@/services/exchange/urito';
+import type { ExchangeFormat, ExchangeProductRow } from '@/services/exchange/types';
 import { useApp, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import type { Category, Product, StockMovement } from '@/db/types';
 
-interface Row {
-  sku: string;
-  name: string;
-  category: string;
-  unit: string;
-  price: number;
-  cost: number;
-  stock: number | null;
-  minStock: number | null;
-  barcode: string;
-  image: string;
-  isService: boolean;
-  active: boolean;
-}
-
-/** Header text (tones and case removed) -> field. Covers the exports of the
- *  common Vietnamese POS apps as well as Urito's own CSV columns. */
-const HEADERS: Record<string, string[]> = {
-  sku: ['ma hang hoa', 'ma hang', 'ma sp', 'ma san pham', 'sku', 'code'],
-  name: ['ten hang hoa', 'ten hang', 'ten san pham', 'ten', 'name', 'product name', '商品名'],
-  category: ['ten nhom', 'nhom hang', 'nhom', 'category', 'カテゴリー'],
-  unit: ['dvt', 'don vi', 'unit'],
-  price: ['gia ban', 'gia', 'price', '販売価格'],
-  cost: ['gia von', 'von', 'cost', '原価'],
-  stock: ['ton kho', 'ton', 'stock', '在庫数'],
-  minStock: ['dinh muc ton nho nhat', 'ton toi thieu', 'min stock'],
-  barcode: ['ma vach', 'barcode', 'バーコード'],
-  image: ['hinh anh', 'anh', 'image'],
-  kind: ['loai hang'],
-  blocked: ['khong cho phep ban'],
-};
-
-const norm = (s: string) => removeTones(s.toLowerCase()).replace(/[?:]/g, '').replace(/\s+/g, ' ').trim();
-
-function mapColumns(head: string[]): Record<string, number> {
-  const found: Record<string, number> = {};
-  head.forEach((h, i) => {
-    const key = norm(h ?? '');
-    for (const [field, names] of Object.entries(HEADERS)) {
-      if (found[field] === undefined && names.includes(key)) found[field] = i;
-    }
-  });
-  return found;
-}
+type Row = ExchangeProductRow;
 
 export function ImportProductsModal({
   categories,
@@ -65,9 +23,11 @@ export function ImportProductsModal({
   onClose: () => void;
 }) {
   const t = useT();
-  const currency = useApp((s) => s.settings.currency);
+  const settings = useApp((s) => s.settings);
+  const currency = settings.currency;
   const user = useApp((s) => s.user);
   const [rows, setRows] = useState<Row[]>([]);
+  const [format, setFormat] = useState<ExchangeFormat | null>(null);
   const [existing, setExisting] = useState<Map<string, Product>>(new Map());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -85,50 +45,12 @@ export function ImportProductsModal({
       const table = isXlsx ? await readXlsx(file) : parseCsv(await file.text());
       if (!table.length) return;
 
-      const [head, ...body] = table;
-      const cols = mapColumns(head);
-      const num = (v: string | undefined) => Number(String(v ?? '').replace(/[^\d.-]/g, ''));
-      const money = (v: string | undefined) => parseMoney(String(v ?? '0'), currency);
-      let parsed: Row[];
-
-      if (cols.name !== undefined) {
-        const cell = (c: string[], f: string) => (cols[f] === undefined ? '' : String(c[cols[f]] ?? '').trim());
-        parsed = body.map((c) => {
-          const image = cell(c, 'image');
-          return {
-            sku: cell(c, 'sku'),
-            name: cell(c, 'name'),
-            category: cell(c, 'category'),
-            unit: cell(c, 'unit'),
-            price: money(cell(c, 'price')),
-            cost: money(cell(c, 'cost')),
-            stock: cols.stock === undefined ? null : Number.isFinite(num(cell(c, 'stock'))) ? num(cell(c, 'stock')) : 0,
-            minStock: cols.minStock === undefined ? null : Math.max(0, num(cell(c, 'minStock')) || 0),
-            barcode: cell(c, 'barcode'),
-            image: /^(https?:|data:image)/i.test(image) ? image : '',
-            isService: cell(c, 'kind') === '2',
-            active: cell(c, 'blocked') !== '1',
-          };
-        });
-      } else {
-        // Plain CSV without recognisable headers: name, price, cost, category, sku, barcode, stock.
-        const looksLikeHeader = head.some((c) => /name|tên|商品|price|giá|価格/i.test(c));
-        const data = looksLikeHeader ? body : table;
-        parsed = data.map((c) => ({
-          name: (c[0] ?? '').trim(),
-          price: money(c[1]),
-          cost: money(c[2]),
-          category: (c[3] ?? '').trim(),
-          sku: (c[4] ?? '').trim(),
-          barcode: (c[5] ?? '').trim(),
-          stock: num(c[6]) || 0,
-          unit: '',
-          minStock: null,
-          image: '',
-          isService: false,
-          active: true,
-        }));
-      }
+      const detected: ExchangeFormat = !isXlsx && isShopifyProductCsv(table[0]) ? 'shopify' : 'urito';
+      setFormat(detected);
+      const parsed: Row[] =
+        detected === 'shopify'
+          ? parseShopifyProductCsv(table, { currency })
+          : parseUritoProductTable(table, { currency });
 
       const list = parsed.filter((r) => r.name);
       const map = new Map<string, Product>();
@@ -202,6 +124,8 @@ export function ImportProductsModal({
             minStock: row.minStock ?? old.minStock,
             isService: row.isService,
             active: row.active,
+            taxCategory: row.taxable ? old.taxCategory : 'exempt',
+            i18n: row.description ? { ...old.i18n, [settings.lang]: { ...old.i18n?.[settings.lang], description: row.description } } : old.i18n,
             image: row.image || old.image,
             updatedAt: now,
           });
@@ -222,6 +146,8 @@ export function ImportProductsModal({
             minStock: row.minStock ?? 0,
             isService: row.isService,
             active: row.active,
+            taxCategory: row.taxable ? 'standard' : 'exempt',
+            i18n: row.description ? { [settings.lang]: { description: row.description } } : undefined,
             color: catByName.get(row.category.toLowerCase())?.color ?? PALETTE[i % PALETTE.length],
             image: row.image,
             modifierGroupIds: [],
@@ -300,6 +226,7 @@ export function ImportProductsModal({
         {rows.length > 0 && (
           <>
             <div className="row gap-8 wrap">
+              {format && <span className="badge badge-neutral">{t('products.formatDetected', { format: format === 'shopify' ? 'Shopify CSV' : 'Urito CSV' })}</span>}
               <span className="badge badge-success">{t('products.importNew', { n: additions })}</span>
               <span className="badge badge-info">{t('products.importUpdate', { n: updates })}</span>
             </div>

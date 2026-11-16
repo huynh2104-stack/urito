@@ -12,6 +12,7 @@ import { growth } from '@/services/reports';
 import { ensureRollupsBuilt } from '@/services/rollups';
 import {
   categoryStatsFromProductStats,
+  channelStatsFromRollups,
   employeeStatsFromRollups,
   orderTypeStatsFromRollups,
   paymentStatsFromRollups,
@@ -42,6 +43,12 @@ const TYPE_LABEL: Record<string, TranslationKey> = {
   dine_in: 'pos.dineIn',
   takeaway: 'pos.takeaway',
   delivery: 'pos.delivery',
+};
+
+const CHANNEL_LABEL: Record<string, TranslationKey> = {
+  pos: 'channel.pos',
+  shopify: 'channel.shopify',
+  ec: 'channel.ec',
 };
 
 export function ReportsPage() {
@@ -112,6 +119,7 @@ export function ReportsPage() {
   const byPayment = useMemo(() => paymentStatsFromRollups(dayRows), [dayRows]);
   const byEmployee = useMemo(() => employeeStatsFromRollups(dayRows), [dayRows]);
   const byType = useMemo(() => orderTypeStatsFromRollups(dayRows), [dayRows]);
+  const byChannel = useMemo(() => channelStatsFromRollups(dayRows), [dayRows]);
   const hasData = summary.orderCount > 0 || summary.voidCount > 0 || summary.refunds > 0;
 
   const peak = byHour.reduce((best, cur) => (cur.value > best.value ? cur : best), byHour[0]);
@@ -317,6 +325,24 @@ export function ReportsPage() {
             </div>
             <div className="card-body">
               <BarChart data={byHour} format={(v) => money(v)} height={220} />
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head">
+              <span className="card-title">{t('rep.byChannel')}</span>
+            </div>
+            <div className="card-body">
+              <HBarList
+                rows={byChannel.map((r, i) => ({
+                  key: r.key,
+                  label: t(CHANNEL_LABEL[r.key] ?? 'channel.pos'),
+                  value: r.value,
+                  meta: `${r.count}`,
+                  color: PALETTE[i % PALETTE.length],
+                }))}
+                format={(v) => money(v)}
+                emptyLabel={t('rep.noData')}
+              />
             </div>
           </div>
           <div className="card">

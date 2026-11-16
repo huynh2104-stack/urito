@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field, Input, Modal, MoneyInput } from '@/components/ui';
+import { Button, Field, Input, Modal, MoneyInput, Select } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { CURRENCIES } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
@@ -8,7 +8,8 @@ import { toast, useUI } from '@/store/ui';
 import { payOrder, PaymentShortfallError, StockError } from '@/services/orders';
 import { notifyOrderPaid } from '@/features/backup/useAutoBackup';
 import { printDocument } from '@/print/PrintHost';
-import { Receipt } from '@/print/Receipt';
+import { localizeOrderForPrint, Receipt } from '@/print/Receipt';
+import type { Lang } from '@/db/types';
 import { RyoshushoModal } from '@/print/Ryoshusho';
 import type { Order, PayMethod } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
@@ -44,6 +45,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<Order | null>(null);
   const [showRyoshu, setShowRyoshu] = useState(false);
+  const [receiptLang, setReceiptLang] = useState<Lang>(() => settings.lang);
 
   const paidSoFar = entries.reduce((s, e) => s + e.amount, 0);
   const remaining = Math.max(0, totals.total - paidSoFar);
@@ -129,7 +131,24 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
         title={t('pay.success')}
         footer={
           <>
-            <Button icon="print" onClick={() => printDocument(<Receipt order={done} />)}>
+            <Select
+              aria-label={t('rc.language')}
+              value={receiptLang}
+              onChange={(e) => setReceiptLang(e.target.value as Lang)}
+              style={{ width: 92 }}
+            >
+              <option value="ja">JA</option>
+              <option value="en">EN</option>
+              <option value="vi">VI</option>
+            </Select>
+            <Button
+              icon="print"
+              onClick={() =>
+                void localizeOrderForPrint(done, receiptLang).then((locOrder) =>
+                  printDocument(<Receipt order={locOrder} langOverride={receiptLang} />),
+                )
+              }
+            >
               {t('common.print')}
             </Button>
             <Button icon="receipt" onClick={() => setShowRyoshu(true)}>

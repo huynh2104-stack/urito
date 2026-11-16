@@ -7,10 +7,10 @@ import { db } from '@/db/db';
 import { useApp, useCan, useMoney, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import { printDocument } from '@/print/PrintHost';
-import { Receipt } from '@/print/Receipt';
+import { localizeOrderForPrint, Receipt } from '@/print/Receipt';
 import { RyoshushoModal } from '@/print/Ryoshusho';
 import { refundAmountFor, refundOrder, voidOrder } from '@/services/orders';
-import type { Order, PayMethod } from '@/db/types';
+import type { Lang, Order, PayMethod } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
 
 const METHOD_KEY: Record<PayMethod, TranslationKey> = {
@@ -44,6 +44,7 @@ export function OrderDetail({
   const [voidReason, setVoidReason] = useState('');
   const [showRefund, setShowRefund] = useState(false);
   const [showRyoshu, setShowRyoshu] = useState(false);
+  const [receiptLang, setReceiptLang] = useState<Lang>(() => lang);
 
   const reload = async () => {
     const fresh = await db.orders.get(order.id);
@@ -160,7 +161,24 @@ export function OrderDetail({
       )}
 
       <div className="row wrap gap-8">
-        <Button icon="print" onClick={() => printDocument(<Receipt order={order} />)}>
+        <Select
+          aria-label={t('rc.language')}
+          value={receiptLang}
+          onChange={(e) => setReceiptLang(e.target.value as Lang)}
+          style={{ width: 88 }}
+        >
+          <option value="ja">JA</option>
+          <option value="en">EN</option>
+          <option value="vi">VI</option>
+        </Select>
+        <Button
+          icon="print"
+          onClick={() =>
+            void localizeOrderForPrint(order, receiptLang).then((locOrder) =>
+              printDocument(<Receipt order={locOrder} langOverride={receiptLang} />),
+            )
+          }
+        >
           {t('orders.reprint')}
         </Button>
         {order.status !== 'open' && (

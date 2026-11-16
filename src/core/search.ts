@@ -33,6 +33,11 @@ export function matchesProduct(p: Product, query: string): boolean {
   const codeQ = normaliseCode(trimmed);
   if (normaliseText(p.name).includes(q)) return true;
   if (p.kana && normaliseText(p.kana).includes(q)) return true;
+  if (p.i18n) {
+    for (const loc of Object.values(p.i18n)) {
+      if (loc?.name && normaliseText(loc.name).includes(q)) return true;
+    }
+  }
   if (p.sku && normaliseCode(p.sku).includes(codeQ)) return true;
   if (p.barcode && normaliseCode(p.barcode).includes(codeQ)) return true;
   return false;
@@ -80,9 +85,15 @@ export function buildProductSearchIndex(products: Product[]): ProductSearchIndex
   const entries = products.map((product) => {
     if (product.barcode) byBarcode.set(normaliseCode(product.barcode), product);
     if (product.sku) bySku.set(normaliseCode(product.sku), product);
+    const i18nNames = product.i18n
+      ? Object.values(product.i18n)
+          .map((loc) => (loc?.name ? normaliseText(loc.name) : ''))
+          .filter(Boolean)
+      : [];
     const key = [
       normaliseText(product.name),
       product.kana ? normaliseText(product.kana) : '',
+      ...i18nNames,
       product.sku ? normaliseCode(product.sku) : '',
       product.barcode ? normaliseCode(product.barcode) : '',
     ]
