@@ -2,8 +2,9 @@
   "name": "urito",
   "version": "0.5.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
-  "description": "Urito - POS / sales, payment, invoicing and analytics for retail shops, cafes and small businesses",
+  "description": "小規模店舗向けのオフラインPOSシステム / Offline-first point-of-sale PWA for small shops",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
