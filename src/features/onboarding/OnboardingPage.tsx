@@ -25,7 +25,9 @@ export function OnboardingPage() {
   const lang = useApp((s) => s.settings.lang);
 
   const [step, setStep] = useState(0);
-  const [currency, setCurrency] = useState<CurrencyCode>('VND');
+  const [currency, setCurrency] = useState<CurrencyCode>(() =>
+    lang === 'ja' ? 'JPY' : lang === 'vi' ? 'VND' : 'USD',
+  );
   const [businessType, setBusinessType] = useState<BusinessType>('retail');
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
