@@ -46,6 +46,7 @@ describe('分離データベースによるデモモード (E-02)', () => {
     // URLに有効なデモパラメータがあれば urito-demo を返し sessionStorage にも記憶する
     expect(resolveDbName('?demo=ja-retail', store)).toBe(DEMO_DB_NAME);
     expect(store.getItem(DEMO_SESSION_KEY)).toBe('ja-retail');
+    expect(resolveDbName('?demo=1', memoryStorage())).toBe(DEMO_DB_NAME);
 
     // リロード等でクエリが消えても sessionStorage により urito-demo を維持する
     expect(resolveDbName('', store)).toBe(DEMO_DB_NAME);

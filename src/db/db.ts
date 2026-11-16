@@ -24,7 +24,7 @@ import type {
   User,
 } from './types';
 
-/** Tables included in a backup snapshot, in restore order. */
+/** バックアップ対象となるテーブル一覧（復元順に定義）。 */
 export const BACKUP_TABLES = [
   'settings',
   'users',
@@ -99,6 +99,7 @@ export const DEMO_SESSION_KEY = 'urito.demo';
 
 export function parseDemoScenario(raw: string | null | undefined): DemoScenario | null {
   if (raw === 'ja-retail' || raw === 'ja-cafe' || raw === 'ja-restaurant') return raw;
+  if (raw === '1' || raw === 'true') return 'ja-retail';
   return null;
 }
 
@@ -171,7 +172,7 @@ export function clearDbDirty(): void {
   try {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(DIRTY_KEY);
   } catch {
-    /* ignore */
+    /* localStorage 利用不可時はメモリ状態のみ更新する */
   }
 }
 

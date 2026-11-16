@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
+import fc from 'fast-check';
 import { dayKey } from '@/core/date';
 import { db } from '@/db/db';
 import { applyOrderRollupDelta, ensureRollupsBuilt, rebuildRollups } from './rollups';
@@ -197,5 +198,132 @@ describe('rollups 日次・商品別集計テーブル (C-04)', () => {
     await ensureRollupsBuilt();
     expect(await db.dailyStats.count()).toBe(1);
     expect(await db.dailyProductStats.count()).toBe(1);
+  });
+
+  it('プロパティテスト：ランダムな販売・一部返金・取消列の増分更新が rebuildRollups の全件再構築と一致する', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(
+          fc.record({
+            dayOffset: fc.integer({ min: 0, max: 4 }),
+            price: fc.integer({ min: 100, max: 5000 }),
+            qty: fc.integer({ min: 1, max: 5 }),
+            action: fc.constantFrom<'keep' | 'partial_refund' | 'void'>('keep', 'partial_refund', 'void'),
+          }),
+          { minLength: 1, maxLength: 12 },
+        ),
+        async (ops) => {
+          await Promise.all(db.tables.map((t) => t.clear()));
+          const base = new Date('2026-11-10T10:00:00').getTime();
+
+          for (let idx = 0; idx < ops.length; idx++) {
+            const op = ops[idx];
+            const ts = base + op.dayOffset * 86_400_000;
+            const total = op.price * op.qty;
+            const tax = Math.floor((total * 1000) / 11000);
+            const paidOrder = makeOrder({
+              id: `ord_${idx}`,
+              code: `ORD-${idx}`,
+              createdAt: ts,
+              paidAt: ts,
+              updatedAt: ts,
+              subtotal: total,
+              total,
+              tax,
+              taxLines: [{ rateBp: 1000, gross: total, net: total - tax, tax }],
+              paidAmount: total,
+              payments: [{ id: `pm_${idx}`, method: 'cash', amount: total, ref: '', at: ts }],
+              items: [
+                {
+                  id: `it_${idx}`,
+                  productId: `p_${idx % 3}`,
+                  name: `商品${idx % 3}`,
+                  unit: '個',
+                  price: op.price,
+                  cost: Math.floor(op.price / 2),
+                  qty: op.qty,
+                  modifiers: [],
+                  discountType: 'none',
+                  discountValue: 0,
+                  note: '',
+                  gross: total,
+                  discount: 0,
+                  total,
+                  refundedQty: 0,
+                  taxCategory: 'standard',
+                  taxRateBp: 1000,
+                },
+              ],
+            });
+            await db.orders.put(paidOrder);
+            await applyOrderRollupDelta(null, paidOrder);
+
+            if (op.action === 'partial_refund') {
+              const refTs = ts + 86_400_000;
+              const refAmt = op.price;
+              const refunded: Order = {
+                ...paidOrder,
+                status: op.qty === 1 ? 'refunded' : 'paid',
+                refundedAmount: refAmt,
+                items: [{ ...paidOrder.items[0], refundedQty: 1 }],
+                refunds: [
+                  {
+                    id: `rf_${idx}`,
+                    at: refTs,
+                    amount: refAmt,
+                    reason: '返品',
+                    method: 'cash',
+                    userId: 'u1',
+                    items: [{ itemId: `it_${idx}`, qty: 1, amount: refAmt }],
+                    restock: true,
+                  },
+                ],
+                updatedAt: refTs,
+              };
+              await db.orders.put(refunded);
+              await applyOrderRollupDelta(paidOrder, refunded);
+            } else if (op.action === 'void') {
+              const voidTs = ts + 3600_000;
+              const voided: Order = {
+                ...paidOrder,
+                status: 'void',
+                refundedAmount: total,
+                voidedAt: voidTs,
+                voidReason: '取消',
+                refunds: [
+                  {
+                    id: `vf_${idx}`,
+                    at: voidTs,
+                    amount: total,
+                    reason: '取消',
+                    method: 'cash',
+                    userId: 'u1',
+                    items: [{ itemId: `it_${idx}`, qty: op.qty, amount: total }],
+                    restock: true,
+                  },
+                ],
+                updatedAt: voidTs,
+              };
+              await db.orders.put(voided);
+              await applyOrderRollupDelta(paidOrder, voided);
+            }
+          }
+
+          const deltaDaily = await db.dailyStats.orderBy('day').toArray();
+          const deltaProd = await db.dailyProductStats.toArray();
+          await rebuildRollups({ batchSize: 4 });
+          const rebuiltDaily = await db.dailyStats.orderBy('day').toArray();
+          const rebuiltProd = await db.dailyProductStats.toArray();
+
+          expect(deltaDaily.map((d) => ({ ...d, updatedAt: 0 }))).toEqual(
+            rebuiltDaily.map((d) => ({ ...d, updatedAt: 0 })),
+          );
+          expect(deltaProd.sort((a, b) => (a.day + a.productId).localeCompare(b.day + b.productId))).toEqual(
+            rebuiltProd.sort((a, b) => (a.day + a.productId).localeCompare(b.day + b.productId)),
+          );
+        },
+      ),
+      { numRuns: 20 },
+    );
   });
 });

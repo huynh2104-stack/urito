@@ -1,7 +1,21 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { clearDbDirty, db, isDbDirty, withoutDirtyTracking } from '@/db/db';
-import { BackupValidationError, createSnapshot, decodeSnapshotBuffer, encodeSnapshotBlob, isGzipSupported, mergeSnapshot, restoreSnapshot, type Snapshot } from './backup';
+import {
+  BackupValidationError,
+  createSnapshot,
+  createSnapshotTextStream,
+  decodeSnapshotBuffer,
+  encodeSnapshotBlob,
+  isGzipSupported,
+  mergeSnapshot,
+  restoreSnapshot,
+  syncImagesToFolder,
+  writeBackupToFolderStreaming,
+  type FsDirectoryHandle,
+  type FsFileHandle,
+  type Snapshot,
+} from './backup';
 import type { Customer, Order, Product, StockMovement } from '@/db/types';
 
 const now = Date.now();
@@ -31,8 +45,7 @@ const movement = (over: Partial<StockMovement> = {}): StockMovement => ({
   cost: 9000, refType: 'order', refId: 'o1', note: '', userId: '', userName: '', at: now, ...over,
 });
 
-/** What a phone that started from this computer's backup looks like after
- *  selling during a power cut: same catalogue, one extra sale. */
+/** 停電中などに別端末で1件販売した後に生成されたスナップショットを模擬する。 */
 async function phoneSnapshotWithOneSale(): Promise<Snapshot> {
   const snap = await createSnapshot('test');
   const clone = JSON.parse(JSON.stringify(snap)) as Snapshot;
@@ -44,7 +57,7 @@ async function phoneSnapshotWithOneSale(): Promise<Snapshot> {
   return clone;
 }
 
-describe('mergeSnapshot', () => {
+describe('mergeSnapshot 端末間マージ', () => {
   beforeEach(async () => {
     await Promise.all(db.tables.map((t) => t.clear()));
     await db.products.put(product());
@@ -53,7 +66,7 @@ describe('mergeSnapshot', () => {
     await db.stockMovements.put(movement());
   });
 
-  it('adds only records this device does not have', async () => {
+  it('ローカル端末に存在しないレコードのみを追加する', async () => {
     const result = await mergeSnapshot(await phoneSnapshotWithOneSale());
     expect(result.added.orders).toBe(1);
     expect(result.added.products).toBe(1);
@@ -61,13 +74,13 @@ describe('mergeSnapshot', () => {
     expect(await db.products.count()).toBe(2);
   });
 
-  it('replays the phone stock movements onto existing products', async () => {
+  it('既存商品の在庫数へ別端末での出庫履歴差分を再生する', async () => {
     await mergeSnapshot(await phoneSnapshotWithOneSale());
-    expect((await db.products.get('p1'))!.stock).toBe(8); // 10 - 2 sold on the phone
-    expect((await db.products.get('p-new'))!.stock).toBe(50); // new product taken as-is
+    expect((await db.products.get('p1'))!.stock).toBe(8); // 別端末で2点販売された分を減算 (10 - 2)
+    expect((await db.products.get('p-new'))!.stock).toBe(50); // 新規追加商品はスナップショット値を採用
   });
 
-  it('applies the imported sale to the customer', async () => {
+  it('取り込んだ売上のポイント・累計購入額・売掛金を顧客へ反映する', async () => {
     await mergeSnapshot(await phoneSnapshotWithOneSale());
     const c = (await db.customers.get('c1'))!;
     expect(c.orderCount).toBe(1);
@@ -76,13 +89,13 @@ describe('mergeSnapshot', () => {
     expect(c.debt).toBe(4000);
   });
 
-  it('renames an invoice number that clashes with a local one', async () => {
+  it('ローカルと重複する伝票番号にサフィックスを付与して衝突を回避する', async () => {
     const result = await mergeSnapshot(await phoneSnapshotWithOneSale());
     expect(result.renamedCodes).toBe(1);
     expect((await db.orders.get('o-phone'))!.code).toBe('HD-0001-M');
   });
 
-  it('is idempotent: merging the same file twice changes nothing more', async () => {
+  it('同一スナップショットを2回マージしても結果が変わらない（冪等性）', async () => {
     const snap = await phoneSnapshotWithOneSale();
     await mergeSnapshot(snap);
     const second = await mergeSnapshot(snap);
@@ -91,7 +104,7 @@ describe('mergeSnapshot', () => {
     expect((await db.customers.get('c1'))!.orderCount).toBe(1);
   });
 
-  it('never touches local settings', async () => {
+  it('端末固有の店舗設定(settings)は上書きせず維持する', async () => {
     await db.settings.put({ id: 'app', shopName: 'PC' } as never);
     const snap = await phoneSnapshotWithOneSale();
     snap.data.settings = [{ id: 'app', shopName: 'Phone' }];
@@ -206,5 +219,114 @@ describe('Gzip圧縮バックアップと変更検知 (C-06)', () => {
       await db.settings.put({ id: 'app', shopName: 'Urito' } as never);
     });
     expect(isDbDirty()).toBe(false);
+  });
+
+  it('500件超のデータでもストリーミングJSON生成で全件を正しく分割出力できる (C-06)', async () => {
+    const bulkProducts = Array.from({ length: 620 }, (_, i) =>
+      product({ id: `p-${String(i).padStart(4, '0')}`, name: `商品${i}` }),
+    );
+    await db.products.bulkPut(bulkProducts);
+
+    const stream = createSnapshotTextStream('test');
+    const json = await new Response(stream.pipeThrough(new TextEncoderStream())).text();
+    const parsed = JSON.parse(json) as Snapshot;
+    expect(parsed.counts.products).toBe(620);
+    expect(parsed.data.products).toHaveLength(620);
+  });
+
+  it('フォルダバックアップ時に images/ サブフォルダへ差分同期し、画像付き完全復元もできる (C-01)', async () => {
+    await db.products.put(product({ id: 'p-img', imageRev: 2 }));
+    const rawBytes = new Uint8Array([1, 2, 3, 4]).buffer;
+    await db.productImages.put({
+      productId: 'p-img',
+      mime: 'image/webp',
+      w: 320,
+      h: 320,
+      rev: 2,
+      bytes: rawBytes,
+    });
+
+    const files = new Map<string, Uint8Array>();
+    const makeDir = (prefix: string): FsDirectoryHandle => ({
+      kind: 'directory',
+      name: prefix || 'root',
+      getFileHandle(name) {
+        const key = `${prefix}${name}`;
+        return Promise.resolve({
+          kind: 'file',
+          name,
+          getFile() {
+            const bytes = files.get(key) ?? new Uint8Array();
+            return Promise.resolve(
+              new File([bytes.slice().buffer], name, {
+                type: name.endsWith('.webp') ? 'image/webp' : 'application/gzip',
+                lastModified: Date.now(),
+              }),
+            );
+          },
+          createWritable() {
+            const chunks: Uint8Array[] = [];
+            return Promise.resolve({
+              async write(data) {
+                if (typeof data === 'string') chunks.push(new TextEncoder().encode(data));
+                else if (data instanceof Blob) chunks.push(new Uint8Array(await data.arrayBuffer()));
+                else if (ArrayBuffer.isView(data)) chunks.push(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+                else chunks.push(new Uint8Array(data));
+              },
+              close() {
+                const total = chunks.reduce((s, c) => s + c.byteLength, 0);
+                const merged = new Uint8Array(total);
+                let off = 0;
+                for (const c of chunks) {
+                  merged.set(c, off);
+                  off += c.byteLength;
+                }
+                files.set(key, merged);
+                return Promise.resolve();
+              },
+            });
+          },
+        } satisfies FsFileHandle);
+      },
+      getDirectoryHandle(name) {
+        return Promise.resolve(makeDir(`${prefix}${name}/`));
+      },
+      removeEntry(name) {
+        files.delete(`${prefix}${name}`);
+        return Promise.resolve();
+      },
+      async *values() {
+        for (const [k] of files) {
+          if (!k.startsWith(prefix)) continue;
+          const rest = k.slice(prefix.length);
+          if (rest.includes('/')) continue;
+          yield await this.getFileHandle(rest);
+        }
+      },
+    });
+
+    const root = makeDir('');
+    const written = await writeBackupToFolderStreaming(root, 'test', 5);
+    expect(written).toBeTruthy();
+    expect(files.has('images/p-img-2.webp')).toBe(true);
+    // 2回目は既存画像をスキップするため0件
+    expect(await syncImagesToFolder(root)).toBe(0);
+
+    // 画像込みシングルファイル経由での復元
+    const fullSnap = await createSnapshot('test', { includeImages: true });
+    expect(fullSnap.images).toHaveLength(1);
+    await db.products.clear();
+    await db.productImages.clear();
+    await restoreSnapshot(fullSnap);
+    const restoredImg = await db.productImages.get('p-img');
+    expect(restoredImg?.rev).toBe(2);
+    expect(new Uint8Array(restoredImg!.bytes)).toEqual(new Uint8Array([1, 2, 3, 4]));
+
+    // フォルダからの復元 (.json.gz + images/)
+    const gzSnap = await createSnapshot('test');
+    expect(gzSnap.images).toBeUndefined();
+    await db.productImages.clear();
+    await restoreSnapshot(gzSnap, root);
+    expect((await db.productImages.get('p-img'))?.rev).toBe(2);
   });
 });

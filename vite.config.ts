@@ -1,18 +1,53 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import type { Plugin } from 'vite';
 
-/** B-07: 本番ビルド時のアセット一覧をハッシュ付きで埋め込んだ sw.js を生成する（.woff とサンプル画像を除く）。 */
+/** E-06: 実店舗向け Netlify ビルド（--mode shop）時に HTML・マニフェストをベトナム語表記へ切り替える。 */
+function uritoShopVariant(isShop: boolean): Plugin {
+  return {
+    name: 'urito-shop-variant',
+    apply: 'build',
+    transformIndexHtml(html) {
+      if (!isShop) return html;
+      return html
+        .replace('<html lang="ja"', '<html lang="vi"')
+        .replace(
+          'content="Urito - オフライン対応POSレジ・会計・レシート・売上レポート"',
+          'content="Urito - Phần mềm bán hàng, thu ngân, in hoá đơn và báo cáo doanh thu ngoại tuyến"',
+        )
+        .replace('<title>Urito</title>', '<title>Urito POS — Phần mềm bán hàng</title>');
+    },
+    writeBundle(options) {
+      if (!isShop) return;
+      const root = fileURLToPath(new URL('.', import.meta.url));
+      const baseManifest = JSON.parse(
+        readFileSync(join(root, 'public', 'manifest.webmanifest'), 'utf8'),
+      ) as Record<string, unknown>;
+      const shopManifest = {
+        ...baseManifest,
+        name: 'Urito POS — Bán hàng',
+        short_name: 'Urito',
+        description: 'Phần mềm bán hàng, thu ngân, in hoá đơn và quản lý tồn kho ngoại tuyến',
+        lang: 'vi',
+      };
+      const outDir = options.dir ?? join(root, 'dist');
+      writeFileSync(join(outDir, 'manifest.webmanifest'), `${JSON.stringify(shopManifest, null, 2)}\n`, 'utf8');
+    },
+  };
+}
+
+/** B-07: 本番ビルド時のアセット一覧をハッシュ付きで埋め込んだ sw.js を生成する（実ファイル存在確認済みのアセットのみ登録）。 */
 function uritoServiceWorker(): Plugin {
   return {
     name: 'urito-sw',
     apply: 'build',
-    generateBundle(_options, bundle) {
+    writeBundle(options, bundle) {
       const root = fileURLToPath(new URL('.', import.meta.url));
+      const outDir = options.dir ?? join(root, 'dist');
       const iconsDir = join(root, 'public', 'icons');
       const staticEntries = ['./', './index.html', './manifest.webmanifest'];
       if (existsSync(iconsDir)) {
@@ -25,12 +60,13 @@ function uritoServiceWorker(): Plugin {
       const hash = createHash('sha256');
       for (const key of Object.keys(bundle).sort()) {
         if (key.startsWith('samples/')) continue;
-        if (!/^assets\/.*\.(js|css|woff2)$/.test(key)) continue;
-        assetEntries.push(`./${key}`);
         const item = bundle[key];
         hash.update(key);
         if (item.type === 'chunk') hash.update(item.code);
         else hash.update(item.source);
+        if (!/^assets\/.*\.(js|css|woff2)$/.test(key)) continue;
+        if (!existsSync(join(outDir, key))) continue;
+        assetEntries.push(`./${key}`);
       }
 
       const precache = [...new Set([...staticEntries, ...assetEntries])];
@@ -41,14 +77,14 @@ function uritoServiceWorker(): Plugin {
         .replace('__URITO_CACHE__', version)
         .replace('/*__URITO_PRECACHE__*/ []', JSON.stringify(precache, null, 2));
 
-      this.emitFile({ type: 'asset', fileName: 'sw.js', source });
+      writeFileSync(join(outDir, 'sw.js'), source, 'utf8');
     },
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [react(), uritoServiceWorker()],
+  plugins: [react(), uritoShopVariant(mode === 'shop'), uritoServiceWorker()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -72,4 +108,4 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
   },
-});
+}));

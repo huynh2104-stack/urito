@@ -1,17 +1,12 @@
 /* Urito Service Worker（ビルド時にキャッシュ名とプリキャッシュ一覧を注入する）
- * HTML はオンライン更新の即時反映を優先しネットワーク優先、ハッシュ済みアセットはキャッシュ優先とする。 */
+ * インストールの失敗は隠蔽せず拒否し、プリキャッシュ済みアセットはキャッシュ優先でオフライン動作を保証する。 */
 
 const CACHE = '__URITO_CACHE__';
 const PRECACHE = /*__URITO_PRECACHE__*/ [];
 
 self.addEventListener('install', (event) => {
   /* skipWaiting() はメッセージ受信時のみ呼び出し、利用中の画面・会計処理を強制リロードしない */
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .catch(() => {}),
-  );
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
 });
 
 self.addEventListener('message', (event) => {
@@ -38,13 +33,19 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => caches.match(request).then((hit) => hit || caches.match('./index.html'))),
+      caches.match(request, { ignoreSearch: true }).then((hit) => {
+        if (hit) return hit;
+        return caches.match('./index.html', { ignoreSearch: true }).then((shell) => {
+          if (shell) return shell;
+          return fetch(request).then((response) => {
+            if (response.ok && response.type === 'basic') {
+              const copy = response.clone();
+              caches.open(CACHE).then((cache) => cache.put(request, copy));
+            }
+            return response;
+          });
+        });
+      }),
     );
     return;
   }

@@ -111,6 +111,27 @@ function AppInner() {
     void init();
   }, [init]);
 
+  useEffect(() => {
+    if (!ready || !settings.onboarded || !user) return;
+    const prefetch = () => {
+      void import('./features/dashboard/DashboardPage');
+      void import('./features/orders/OrdersPage');
+      void import('./features/products/ProductsPage');
+      void import('./features/shifts/ShiftsPage');
+      void import('./features/reports/ReportsPage');
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(prefetch, { timeout: 2500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const tid = window.setTimeout(prefetch, 1200);
+    return () => window.clearTimeout(tid);
+  }, [ready, settings.onboarded, user]);
+
   useAutoBackup();
 
   if (!ready) {

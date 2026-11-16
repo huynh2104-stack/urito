@@ -6,6 +6,6 @@ export const v7Migration: MigrationDef = {
   version: 7,
   stores: {
     ...v6Migration.stores,
-    orders: 'id, code, status, type, createdAt, paidAt, customerId, shiftId, userId, tableId, [channel+externalId]',
+    orders: 'id, code, status, type, createdAt, paidAt, customerId, shiftId, userId, tableId, [status+tableId], [channel+externalId]',
   },
 };

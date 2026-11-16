@@ -150,6 +150,7 @@ export function ImportProductsModal({
             i18n: row.description ? { [settings.lang]: { description: row.description } } : undefined,
             color: catByName.get(row.category.toLowerCase())?.color ?? PALETTE[i % PALETTE.length],
             image: row.image,
+            imageRev: 0,
             modifierGroupIds: [],
             favorite: false,
             sort: i,

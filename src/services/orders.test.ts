@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/db';
 import { defaultOwner, defaultSettings } from '@/db/defaults';
 import { useCart } from '@/store/cart';
-import { holdOrder, payOrder, PaymentShortfallError, refundOrder, reservedByOpenOrders, StockError, voidOrder } from './orders';
+import { findOpenOrderForTable, holdOrder, payOrder, PaymentShortfallError, refundOrder, reservedByOpenOrders, StockError, voidOrder } from './orders';
 import { loadShiftData, openShift } from './shifts';
+import { dayKey } from '@/core/date';
 import type { Customer, Product } from '@/db/types';
 
 function product(stock: number): Product {
@@ -15,7 +16,7 @@ function product(stock: number): Product {
   };
 }
 
-describe('stock guard when selling below zero is off', () => {
+describe('マイナス在庫禁止時の在庫引当ガード', () => {
   const settings = { ...defaultSettings(), negativeStock: false };
   const user = defaultOwner('Owner');
   const ctx = { user, settings, shiftId: null };
@@ -32,7 +33,7 @@ describe('stock guard when selling below zero is off', () => {
     useCart.getState().addProduct(product(4), { qty });
   };
 
-  it('a parked ticket reserves stock, and paying another 4 is refused', async () => {
+  it('保留伝票が在庫を確保し、残数不足の別会計は拒否される', async () => {
     fill(4);
     await holdOrder(useCart.getState(), ctx);
     expect((await reservedByOpenOrders(null)).get('p1')).toBe(4);
@@ -44,7 +45,7 @@ describe('stock guard when selling below zero is off', () => {
     expect((await db.products.get('p1'))!.stock).toBe(4);
   });
 
-  it('the parked ticket itself can still be paid', async () => {
+  it('保留伝票自身は確保分の在庫を使って決済を完了できる', async () => {
     fill(4);
     const held = await holdOrder(useCart.getState(), ctx);
     useCart.getState().clear();
@@ -53,10 +54,10 @@ describe('stock guard when selling below zero is off', () => {
     expect((await db.products.get('p1'))!.stock).toBe(0);
   });
 
-  it('a reopened ticket cannot be paid once the stock is gone', async () => {
+  it('保留後に棚卸等で在庫がゼロになった伝票は決済を拒否する', async () => {
     fill(4);
     const held = await holdOrder(useCart.getState(), ctx);
-    await db.products.update('p1', { stock: 0 }); // e.g. stock adjusted after a count
+    await db.products.update('p1', { stock: 0 }); // 棚卸等による在庫減を模擬
     useCart.getState().clear();
     useCart.getState().loadOrder(held);
     await expect(
@@ -228,5 +229,32 @@ describe('支払額不足ガードとプロモーション利用回数トラン�
 
     expect(order.total).toBe(900);
     expect((await db.promotions.get('pr1'))!.usageCount).toBe(3);
+  });
+
+  it('payOrder 完了時に dailyStats と dailyProductStats が即座に更新され、テーブル検索も機能する (C-04/C-07)', async () => {
+    const settings = defaultSettings('ja', 'JPY');
+    await db.settings.put(settings);
+    useCart.getState().setTable('t1', 'A1');
+    useCart.getState().addProduct(product(10), { qty: 2 });
+    const held = await holdOrder(useCart.getState(), { user, settings, shiftId: null });
+    expect((await findOpenOrderForTable('t1'))?.id).toBe(held.id);
+
+    useCart.getState().clear();
+    useCart.getState().loadOrder(held);
+    const paid = await payOrder({
+      cart: useCart.getState(),
+      ctx: { user, settings, shiftId: null },
+      payments: [{ method: 'cash', amount: 2000 }],
+      allowDebt: false,
+    });
+
+    expect(await findOpenOrderForTable('t1')).toBeUndefined();
+    const today = dayKey(paid.paidAt);
+    const stat = await db.dailyStats.get(today);
+    expect(stat?.orderCount).toBe(1);
+    expect(stat?.revenue).toBe(2000);
+    const prodStat = await db.dailyProductStats.get([today, 'p1']);
+    expect(prodStat?.qty).toBe(2);
+    expect(prodStat?.revenue).toBe(2000);
   });
 });

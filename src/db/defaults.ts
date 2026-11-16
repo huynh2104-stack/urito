@@ -100,7 +100,7 @@ export function defaultOwner(name: string): User {
   };
 }
 
-/** Prefix per business type - what a shop of this kind expects on a receipt. */
+/** 業種別の伝票番号プレフィックス初期値を返す。 */
 export const ORDER_PREFIX: Record<BusinessType, string> = {
   retail: 'HD',
   cafe: 'CF',

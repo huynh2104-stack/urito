@@ -7,7 +7,7 @@ dist-showcase
 .vite
 coverage
 *.zip
-backup/
+/backup/
 *.tsbuildinfo
 docs/plan/
 .claude/

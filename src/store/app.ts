@@ -44,8 +44,7 @@ async function seedDemoScenario(scenario: DemoScenario): Promise<Settings> {
 }
 
 const LAST_USER_KEY = 'session.lastUserId';
-/** Stored instead of a user id when someone signs out, so a reload shows the
- *  staff picker instead of silently signing the first user back in. */
+/** ログアウト状態を示す予約値。リロード時に最初のスタッフへ自動ログインせず選択画面を出すために用いる。 */
 const SIGNED_OUT = '__signed_out__';
 
 export type SettingsPatch = Partial<Settings> | ((cur: Settings) => Partial<Settings>);
@@ -56,7 +55,7 @@ export interface AppState {
   users: User[];
   user: User | null;
   shift: Shift | null;
-  /** Set when the service worker has a newer build waiting. */
+  /** Service Worker の新バージョン待機を検知したときに true になる。 */
   updateReady: boolean;
   demoScenario: DemoScenario | null;
 
@@ -184,7 +183,7 @@ export const useApp = create<AppState>()((set, get) => ({
   async reloadUsers() {
     const users = (await db.users.toArray()).filter((u) => u.active);
     const current = get().user;
-    // Keep the signed-in user object fresh so a role or PIN change applies now.
+        // ロール・PIN変更が即座に反映されるようサインイン中ユーザーを再取得する
     const fresh = current ? (users.find((u) => u.id === current.id) ?? null) : null;
     set({ users, user: fresh });
   },
@@ -210,7 +209,7 @@ export const useApp = create<AppState>()((set, get) => ({
   },
 }));
 
-/** A shift belongs to whoever opened it; any open shift keeps the drawer live. */
+/** シフトの所有者判定。開設者本人または未開設状態の営業レジのみ利用継続を許可する。 */
 export async function findOpenShift(userId: string): Promise<Shift | null> {
   const own = await db.shifts.where('status').equals('open').toArray();
   if (!own.length) return null;
@@ -233,7 +232,7 @@ export function applyTheme(theme: 'light' | 'dark'): void {
 
 export function useT(): TFunc {
   const lang = useApp((s) => s.settings.lang);
-  return makeT(lang);
+  return useMemo(() => makeT(lang), [lang]);
 }
 
 export interface MoneyFormatter {
@@ -286,7 +285,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   cashier: ['sell', 'manageCustomers'],
 };
 
-/** Which permission each top-level route needs; the router refuses the rest. */
+/** 各画面ルートに必要なアクセス権限の対応表。 */
 export const ROUTE_PERMISSION: Record<string, Permission> = {
   '': 'sell',
   pos: 'sell',

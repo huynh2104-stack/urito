@@ -19,8 +19,13 @@ function netOrderTotal(order: Order): number {
 const BATCH_SIZE = 500;
 const ROLLUP_BUILT_KV = 'rollups.v1.built';
 
-function yieldToMain(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+export async function yieldToMain(): Promise<void> {
+  const sched = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (sched?.yield) {
+    await sched.yield();
+    return;
+  }
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
 function emptyHourBuckets() {

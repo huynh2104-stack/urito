@@ -1,8 +1,8 @@
-/** Urito domain model.
+/** Urito ドメインモデル定義。
  *
- *  Money rule: every monetary value is an INTEGER in the currency minor unit
- *  (VND / JPY -> 1 = 1 dong / 1 yen, USD -> 1 = 1 cent).
- *  No floats anywhere, so no rounding drift in receipts or reports.
+ *  金額ルール: すべての金額は通貨の最小単位の「整数（INTEGER）」で保持する
+ *  （JPY / VND -> 1 = 1円 / 1ドン、USD -> 1 = 1セント）。
+ *  浮動小数点による丸め誤差を排除し、レシートと集計値の厳密な一致を保証する。
  */
 
 export type ID = string;

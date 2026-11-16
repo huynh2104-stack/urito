@@ -103,9 +103,12 @@ export class PaymentShortfallError extends Error {
 /** Parks the current cart as an open ticket (a held order or a live table). */
 export async function holdOrder(cart: CartState, ctx: OrderContext): Promise<Order> {
   const order = baseOrder(cart, ctx);
-  await db.transaction('rw', [db.orders, db.kv], async () => {
+  await db.transaction('rw', [db.orders, db.dailyStats, db.dailyProductStats, db.kv], async () => {
+    const prev = cart.orderId ? ((await db.orders.get(cart.orderId)) ?? null) : null;
+    const prevOrder = cart.orderId ? ((await db.orders.get(cart.orderId)) ?? null) : null;
     await db.orders.put(order);
-    await applyOrderRollupDelta(null, order);
+    await applyOrderRollupDelta(prevOrder, order);
+    await applyOrderRollupDelta(prev, order);
     await db.kv.delete('cart.draft');
   });
   return order;
@@ -168,7 +171,9 @@ export async function payOrder(input: PayInput): Promise<Order> {
       ? pointsEarnedFor(order.total, settings.loyaltyEarnPer)
       : 0;
 
+    const prevOrder = cart.orderId ? ((await db.orders.get(cart.orderId)) ?? null) : null;
     await db.orders.put(order);
+    await applyOrderRollupDelta(prevOrder, order);
 
     await applyStockChanges(
       order.items.map((i) => ({
@@ -421,8 +426,7 @@ export async function listOpenOrders(): Promise<Order[]> {
 }
 
 export async function findOpenOrderForTable(tableId: string): Promise<Order | undefined> {
-  const rows = await db.orders.where('status').equals('open').toArray();
-  return rows.find((o) => o.tableId === tableId);
+  return db.orders.where('[status+tableId]').equals(['open', tableId]).first();
 }
 
 /** Net value of an order once refunds are taken off. */
