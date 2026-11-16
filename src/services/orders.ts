@@ -1,0 +1,345 @@
+import { db } from '@/db/db';
+import { formatCode, newId } from '@/core/id';
+import { pointsEarnedFor } from '@/core/cart';
+import { normaliseQty } from '@/core/money';
+import { cartTotals, type CartState } from '@/store/cart';
+import { applyStockChanges } from './inventory';
+import type { Order, OrderItem, Payment, Refund, Settings, User } from '@/db/types';
+
+export interface OrderContext {
+  user: User | null;
+  settings: Settings;
+  shiftId: string | null;
+}
+
+const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers];
+
+function baseOrder(cart: CartState, ctx: OrderContext): Order {
+  const totals = cartTotals(cart, ctx.settings);
+  const now = Date.now();
+  return {
+    id: cart.orderId ?? newId('o'),
+    code: cart.orderCode,
+    type: cart.type,
+    status: 'open',
+    tableId: cart.tableId,
+    tableName: cart.tableName,
+    guests: cart.guests,
+    customerId: cart.customerId,
+    customerName: cart.customerName,
+    items: cart.items,
+    subtotal: totals.subtotal,
+    discountType: cart.discountType,
+    discountValue: cart.discountValue,
+    discount: totals.discount,
+    serviceCharge: totals.serviceCharge,
+    taxMode: ctx.settings.taxMode,
+    taxRate: ctx.settings.taxRate,
+    tax: totals.tax,
+    rounding: totals.rounding,
+    total: totals.total,
+    cogs: totals.cogs,
+    paidAmount: 0,
+    changeAmount: 0,
+    dueAmount: totals.total,
+    payments: [],
+    refunds: [],
+    refundedAmount: 0,
+    pointsEarned: 0,
+    pointsUsed: ctx.settings.loyaltyEnabled ? cart.pointsUsed : 0,
+    pointsValue: totals.pointsRedeemed,
+    note: cart.note,
+    userId: ctx.user?.id ?? '',
+    userName: ctx.user?.name ?? '',
+    shiftId: ctx.shiftId,
+    createdAt: cart.createdAt || now,
+    updatedAt: now,
+    paidAt: 0,
+    voidedAt: 0,
+    voidReason: '',
+  };
+}
+
+/** Units of each product already promised to parked tickets (held orders and
+ *  live tables). They have not left the shelf yet, but they are spoken for. */
+export async function reservedByOpenOrders(excludeOrderId: string | null): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  await db.orders
+    .where('status')
+    .equals('open')
+    .each((o) => {
+      if (o.id === excludeOrderId) return;
+      for (const i of o.items) map.set(i.productId, normaliseQty((map.get(i.productId) ?? 0) + i.qty));
+    });
+  return map;
+}
+
+export class StockError extends Error {
+  constructor(
+    public productName: string,
+    public available: number,
+  ) {
+    super(`Not enough stock: ${productName}`);
+  }
+}
+
+/** Parks the current cart as an open ticket (a held order or a live table). */
+export async function holdOrder(cart: CartState, ctx: OrderContext): Promise<Order> {
+  const order = baseOrder(cart, ctx);
+  await db.orders.put(order);
+  return order;
+}
+
+export interface PayInput {
+  cart: CartState;
+  ctx: OrderContext;
+  payments: { method: Payment['method']; amount: number; ref?: string }[];
+  /** Put the unpaid remainder on the customer's account. */
+  allowDebt: boolean;
+}
+
+/** Finalises a sale: assigns the invoice number, moves stock, updates the
+ *  customer's points and debt - all inside one transaction. */
+export async function payOrder(input: PayInput): Promise<Order> {
+  const { cart, ctx } = input;
+  return db.transaction('rw', orderTables(), async () => {
+    const settings = (await db.settings.get('app')) ?? ctx.settings;
+    const now = Date.now();
+    const order = baseOrder(cart, { ...ctx, settings });
+
+    // The cart screen already warns, but stock can change underneath it (another
+    // ticket paid, a reopened held order), so the till re-checks at the last moment.
+    if (!settings.negativeStock) {
+      const reserved = await reservedByOpenOrders(order.id);
+      const wanted = new Map<string, number>();
+      for (const i of order.items) wanted.set(i.productId, (wanted.get(i.productId) ?? 0) + i.qty);
+      for (const [productId, qty] of wanted) {
+        const product = await db.products.get(productId);
+        if (!product || !product.trackStock || product.isService) continue;
+        const available = Math.max(0, normaliseQty(product.stock - (reserved.get(productId) ?? 0)));
+        if (qty > available) throw new StockError(product.name, available);
+      }
+    }
+
+    const seq = settings.nextOrderNo;
+    order.code = formatCode(settings.orderPrefix, seq, new Date(now));
+    await db.settings.put({ ...settings, nextOrderNo: seq + 1, updatedAt: now });
+
+    const payments: Payment[] = input.payments
+      .filter((p) => p.amount > 0)
+      .map((p) => ({ id: newId('pm'), method: p.method, amount: Math.round(p.amount), ref: p.ref ?? '', at: now }));
+
+    const paidAmount = payments.reduce((s, p) => s + p.amount, 0);
+    const changeAmount = Math.max(0, paidAmount - order.total);
+    const dueAmount = Math.max(0, order.total - paidAmount);
+
+    order.payments = payments;
+    order.paidAmount = paidAmount;
+    order.changeAmount = changeAmount;
+    order.dueAmount = input.allowDebt ? dueAmount : 0;
+    order.status = 'paid';
+    order.paidAt = now;
+    order.updatedAt = now;
+    order.pointsEarned = settings.loyaltyEnabled
+      ? pointsEarnedFor(order.total, settings.loyaltyEarnPer)
+      : 0;
+
+    await db.orders.put(order);
+
+    await applyStockChanges(
+      order.items.map((i) => ({
+        productId: i.productId,
+        delta: -i.qty,
+        type: 'sale' as const,
+        cost: i.cost,
+        refType: 'order',
+        refId: order.id,
+        note: order.code,
+      })),
+      ctx.user,
+    );
+
+    if (order.customerId) {
+      const customer = await db.customers.get(order.customerId);
+      if (customer) {
+        await db.customers.put({
+          ...customer,
+          points: Math.max(0, customer.points - order.pointsUsed + order.pointsEarned),
+          debt: customer.debt + order.dueAmount,
+          totalSpent: customer.totalSpent + order.total,
+          orderCount: customer.orderCount + 1,
+          updatedAt: now,
+        });
+      }
+    }
+
+    return order;
+  });
+}
+
+/** Cancels a paid invoice: stock goes back, customer figures are reversed. */
+export async function voidOrder(order: Order, reason: string, user: User | null): Promise<void> {
+  await db.transaction('rw', orderTables(), async () => {
+    const now = Date.now();
+    const fresh = await db.orders.get(order.id);
+    if (!fresh || fresh.status === 'void') return;
+
+    await db.orders.put({
+      ...fresh,
+      status: 'void',
+      voidedAt: now,
+      voidReason: reason,
+      updatedAt: now,
+    });
+
+    if (fresh.status === 'paid' || fresh.status === 'refunded') {
+      await applyStockChanges(
+        fresh.items.map((i) => ({
+          productId: i.productId,
+          delta: normaliseQty(i.qty - i.refundedQty),
+          type: 'return' as const,
+          cost: i.cost,
+          refType: 'void',
+          refId: fresh.id,
+          note: reason,
+        })),
+        user,
+      );
+
+      if (fresh.customerId) {
+        const customer = await db.customers.get(fresh.customerId);
+        if (customer) {
+          await db.customers.put({
+            ...customer,
+            points: Math.max(0, customer.points - fresh.pointsEarned + fresh.pointsUsed),
+            debt: Math.max(0, customer.debt - fresh.dueAmount),
+            totalSpent: Math.max(0, customer.totalSpent - fresh.total),
+            orderCount: Math.max(0, customer.orderCount - 1),
+            updatedAt: now,
+          });
+        }
+      }
+    }
+  });
+}
+
+export interface RefundLine {
+  itemId: string;
+  qty: number;
+}
+
+export interface RefundInput {
+  order: Order;
+  lines: RefundLine[];
+  reason: string;
+  method: Payment['method'];
+  restock: boolean;
+  user: User | null;
+}
+
+/** Refund value of a line, proportional to how much of it is being returned
+ *  (so order-level discounts are shared fairly across the returned items). */
+export function refundAmountFor(order: Order, item: OrderItem, qty: number): number {
+  if (item.qty <= 0) return 0;
+  const share = item.total / order.subtotal || 0;
+  const orderLevel = order.discount + order.rounding - order.pointsValue;
+  const lineNet = item.total + Math.round(share * (order.serviceCharge - orderLevel));
+  return Math.max(0, Math.round((lineNet * qty) / item.qty));
+}
+
+export async function refundOrder(input: RefundInput): Promise<number> {
+  const { order, lines, user } = input;
+  return db.transaction('rw', orderTables(), async () => {
+    const fresh = await db.orders.get(order.id);
+    if (!fresh) return 0;
+    const now = Date.now();
+
+    let amount = 0;
+    const refundItems: Refund['items'] = [];
+    const items = fresh.items.map((item) => {
+      const line = lines.find((l) => l.itemId === item.id);
+      if (!line || line.qty <= 0) return item;
+      const qty = Math.min(normaliseQty(line.qty), normaliseQty(item.qty - item.refundedQty));
+      if (qty <= 0) return item;
+      const value = refundAmountFor(fresh, item, qty);
+      amount += value;
+      refundItems.push({ itemId: item.id, qty, amount: value });
+      return { ...item, refundedQty: normaliseQty(item.refundedQty + qty) };
+    });
+
+    if (!refundItems.length) return 0;
+
+    const refund: Refund = {
+      id: newId('rf'),
+      at: now,
+      amount,
+      reason: input.reason,
+      method: input.method,
+      userId: user?.id ?? '',
+      items: refundItems,
+      restock: input.restock,
+    };
+
+    const fullyRefunded = items.every((i) => i.refundedQty >= i.qty);
+    await db.orders.put({
+      ...fresh,
+      items,
+      refunds: [...fresh.refunds, refund],
+      refundedAmount: fresh.refundedAmount + amount,
+      status: fullyRefunded ? 'refunded' : fresh.status,
+      updatedAt: now,
+    });
+
+    if (input.restock) {
+      await applyStockChanges(
+        refundItems.map((r) => {
+          const item = fresh.items.find((i) => i.id === r.itemId)!;
+          return {
+            productId: item.productId,
+            delta: r.qty,
+            type: 'return' as const,
+            cost: item.cost,
+            refType: 'refund',
+            refId: fresh.id,
+            note: input.reason,
+          };
+        }),
+        user,
+      );
+    }
+
+    if (fresh.customerId) {
+      const customer = await db.customers.get(fresh.customerId);
+      if (customer) {
+        await db.customers.put({
+          ...customer,
+          totalSpent: Math.max(0, customer.totalSpent - amount),
+          updatedAt: now,
+        });
+      }
+    }
+
+    return amount;
+  });
+}
+
+export async function deleteOpenOrder(orderId: string): Promise<void> {
+  const order = await db.orders.get(orderId);
+  if (order && order.status === 'open') await db.orders.delete(orderId);
+}
+
+/** Live tickets: held retail orders and tables currently being served. */
+export async function listOpenOrders(): Promise<Order[]> {
+  const rows = await db.orders.where('status').equals('open').toArray();
+  return rows.sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export async function findOpenOrderForTable(tableId: string): Promise<Order | undefined> {
+  const rows = await db.orders.where('status').equals('open').toArray();
+  return rows.find((o) => o.tableId === tableId);
+}
+
+/** Net value of an order once refunds are taken off. */
+export function netTotal(order: Order): number {
+  return order.status === 'void' ? 0 : order.total - order.refundedAmount;
+}
