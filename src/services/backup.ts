@@ -1,4 +1,5 @@
 import { db, kvDelete, kvGet, kvSet, BACKUP_TABLES, type BackupTable } from '@/db/db';
+import { hashPin } from '@/core/pin';
 import type { Order, Settings, StockMovement } from '@/db/types';
 
 /* The File System Access API is not in lib.dom yet, so declare the slice we use. */
@@ -55,7 +56,12 @@ export async function createSnapshot(appVersion: string): Promise<Snapshot> {
   const data: Record<string, unknown[]> = {};
   const counts: Record<string, number> = {};
   for (const name of BACKUP_TABLES) {
-    const rows = await (db as unknown as Record<BackupTable, { toArray: () => Promise<unknown[]> }>)[name].toArray();
+    const rawRows = await (db as unknown as Record<BackupTable, { toArray: () => Promise<unknown[]> }>)[name].toArray();
+    // B-06: バックアップJSONには平文PINを絶対に含めない
+    const rows =
+      name === 'users'
+        ? rawRows.map((r) => (isPlainRecord(r) ? { ...r, pin: '' } : r))
+        : rawRows;
     data[name] = rows;
     counts[name] = rows.length;
   }
@@ -261,8 +267,24 @@ export async function readSnapshotFile(file: File): Promise<Snapshot> {
   return validateSnapshot(parsed);
 }
 
+async function prepareUsersForImport(snapshot: Snapshot): Promise<Snapshot> {
+  const users = snapshot.data.users;
+  if (!Array.isArray(users) || !users.length) return snapshot;
+  const converted = await Promise.all(
+    users.map(async (u) => {
+      if (!isPlainRecord(u)) return u;
+      if (typeof u.pin === 'string' && u.pin && !u.pinHash) {
+        const { hash, salt } = await hashPin(u.pin);
+        return { ...u, pin: '', pinHash: hash, pinSalt: salt };
+      }
+      return u.pin ? { ...u, pin: '' } : u;
+    }),
+  );
+  return { ...snapshot, data: { ...snapshot.data, users: converted } };
+}
+
 export async function restoreSnapshot(snapshot: Snapshot): Promise<void> {
-  const valid = validateSnapshot(snapshot);
+  const valid = await prepareUsersForImport(validateSnapshot(snapshot));
   const tables = BACKUP_TABLES.map(
     (name) => (db as unknown as Record<BackupTable, { clear: () => Promise<void>; bulkPut: (rows: unknown[]) => Promise<unknown> }>)[name],
   );
@@ -330,6 +352,7 @@ export interface MergeResult {
  *   - an imported invoice number that clashes with a local one gets a suffix.
  *  Settings stay local on purpose - each device keeps its own printer, prefix... */
 export async function mergeSnapshot(snapshot: Snapshot): Promise<MergeResult> {
+  const prepared = await prepareUsersForImport(snapshot);
   type AnyTable = {
     toCollection: () => { primaryKeys: () => Promise<string[]> };
     bulkAdd: (rows: unknown[]) => Promise<unknown>;
@@ -349,7 +372,7 @@ export async function mergeSnapshot(snapshot: Snapshot): Promise<MergeResult> {
     const localCodes = new Set(codeKeys.filter((k): k is string => typeof k === 'string' && k !== ''));
 
     const incoming = <T extends { id: string }>(name: BackupTable): T[] => {
-      const rows = (snapshot.data[name] ?? []) as T[];
+      const rows = (prepared.data[name] ?? []) as T[];
       const have = existingIds.get(name)!;
       return rows.filter((r) => r && typeof r.id === 'string' && !have.has(r.id));
     };

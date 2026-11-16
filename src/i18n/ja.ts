@@ -794,4 +794,8 @@ export const ja: Dictionary = {
   'feat.multilangCatalogDesc': '1商品の多言語名保持と外貨表示・端数丸めに対応予定です。',
   'feat.ecOrders': 'EC受注取込・共通在庫',
   'feat.ecOrdersDesc': 'オンライン注文の取り込みと実店舗・EC間の在庫共有に対応予定です。',
+  'user.pinKeepHint': '現在のPINを維持する場合は空欄のままにしてください。',
+  'user.pinClear': 'PINを解除する',
+  'auth.unlock': 'ロック解除',
+  'auth.lockedOut': '連続で誤入力されました。{sec}秒後に再試行してください。',
 };

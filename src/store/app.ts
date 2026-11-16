@@ -13,6 +13,8 @@ import {
   type DemoScenario,
 } from '@/db/db';
 import { loadOrInitSettings, seedWorkspace } from '@/db/seed';
+import { BACKGROUND_TASKS, runBackgroundMigrations } from '@/db/migrations/background';
+import { hasPin } from '@/core/pin';
 import { defaultSettings } from '@/db/defaults';
 import { makeT, type TFunc } from '@/i18n';
 import { formatAmount, formatMoney } from '@/core/money';
@@ -110,13 +112,16 @@ export const useApp = create<AppState>()((set, get) => ({
       // 自動ログインは安全な場合のみ（PIN未設定の単一アカウント等）
       if (!user && !signedOut && !settings.requireLogin) {
         const fallback = users.find((u) => u.role === 'owner') ?? users[0];
-        if (fallback && !fallback.pin) user = fallback;
+        if (fallback && !hasPin(fallback)) user = fallback;
       }
-      if (user?.pin && settings.requireLogin) user = null;
+      if (user && hasPin(user) && settings.requireLogin) user = null;
     }
     const shift = user ? await findOpenShift(user.id) : null;
     set({ ready: true, settings, users, user, shift, demoScenario });
     await initCartDraft();
+    void runBackgroundMigrations(BACKGROUND_TASKS)
+      .then(() => get().reloadUsers())
+      .catch(() => {});
   },
 
   async switchDemoScenario(scenario) {

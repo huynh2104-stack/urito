@@ -124,4 +124,39 @@ describe('スナップショット復元時のレコード単位バリデーシ�
     expect(await db.products.count()).toBe(1);
     expect((await db.products.get('p1'))!.name).toBe('Coca');
   });
+
+  it('新規スナップショットには平文PINが含まれず、旧形式PIN入りバックアップの復元時に自動ハッシュ化される (B-06)', async () => {
+    await db.users.put({
+      id: 'u-legacy',
+      name: 'スタッフA',
+      pin: '2580',
+      role: 'cashier',
+      active: true,
+      color: '#0ea5e9',
+      createdAt: now,
+    });
+
+    const exported = await createSnapshot('test');
+    const json = JSON.stringify(exported);
+    expect(json).not.toContain('2580');
+
+    // 旧バックアップ（平文 pin を保持）を取り込むと平文は消去され pinHash/pinSalt が設定される
+    const legacySnap = JSON.parse(json) as Snapshot;
+    legacySnap.data.users = [
+      {
+        id: 'u-legacy',
+        name: 'スタッフA',
+        pin: '2580',
+        role: 'cashier',
+        active: true,
+        color: '#0ea5e9',
+        createdAt: now,
+      },
+    ];
+    await restoreSnapshot(legacySnap);
+    const saved = (await db.users.get('u-legacy'))!;
+    expect(saved.pin).toBe('');
+    expect(saved.pinHash).toBeTruthy();
+    expect(saved.pinSalt).toBeTruthy();
+  });
 });

@@ -794,6 +794,10 @@ export const vi = {
   'feat.multilangCatalogDesc': 'Hiển thị tên hàng và quy đổi giá theo ngoại tệ.',
   'feat.ecOrders': 'Nhập đơn thương mại điện tử',
   'feat.ecOrdersDesc': 'Đồng bộ đơn và tồn kho từ sàn/cửa hàng trực tuyến.',
+  'user.pinKeepHint': 'Để trống để giữ nguyên PIN hiện tại.',
+  'user.pinClear': 'Xoá mã PIN',
+  'auth.unlock': 'Mở khoá',
+  'auth.lockedOut': 'Nhập sai nhiều lần. Vui lòng thử lại sau {sec} giây.',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

@@ -3,6 +3,7 @@ import { Button, Checkbox, ColorPicker, EmptyState, Field, Input, Modal, Select,
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
+import { hashPin, hasPin } from '@/core/pin';
 import { PALETTE } from '@/db/defaults';
 import { useApp, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
@@ -66,7 +67,7 @@ export function UsersPage() {
         </Button>
       </div>
 
-      {active.length > 1 && active.some((u) => u.role === 'owner' && !u.pin) && (
+      {active.length > 1 && active.some((u) => u.role === 'owner' && !hasPin(u)) && (
         <div className="callout callout-warn mb-16">{t('user.ownerNoPin')}</div>
       )}
 
@@ -96,7 +97,7 @@ export function UsersPage() {
                 <div className="tiny dim">{t(ROLE_DESC[user.role])}</div>
               </div>
               <span className="badge">{t(ROLE_KEY[user.role])}</span>
-              {user.pin && <span className="badge badge-info">PIN</span>}
+              {hasPin(user) && <span className="badge badge-info">PIN</span>}
               <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(user)} />
               <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(user)} />
             </div>
@@ -115,9 +116,11 @@ function UserForm({ user, onClose }: { user: User | null; onClose: () => void })
   const setUser = useApp((s) => s.setUser);
   const current = useApp((s) => s.user);
 
+  const existingHasPin = user ? hasPin(user) : false;
   const [name, setName] = useState(user?.name ?? '');
   const [role, setRole] = useState<Role>(user?.role ?? 'cashier');
-  const [pin, setPin] = useState(user?.pin ?? '');
+  const [pin, setPin] = useState('');
+  const [clearPin, setClearPin] = useState(false);
   const [color, setColor] = useState(user?.color ?? PALETTE[2]);
   const [active, setActive] = useState(user?.active ?? true);
 
@@ -139,10 +142,20 @@ function UserForm({ user, onClose }: { user: User | null; onClose: () => void })
       });
       if (!ok) return;
     }
+    const cleanedPin = pin.replace(/\D/g, '').slice(0, 6);
+    let pinHash = clearPin ? undefined : user?.pinHash;
+    let pinSalt = clearPin ? undefined : user?.pinSalt;
+    if (cleanedPin) {
+      const hashed = await hashPin(cleanedPin);
+      pinHash = hashed.hash;
+      pinSalt = hashed.salt;
+    }
     const row: User = {
       id: user?.id ?? newId('u'),
       name: name.trim(),
-      pin: pin.replace(/\D/g, '').slice(0, 6),
+      pin: '',
+      pinHash,
+      pinSalt,
       role,
       active,
       color,
@@ -185,14 +198,22 @@ function UserForm({ user, onClose }: { user: User | null; onClose: () => void })
             <option value="cashier">{t('user.roleCashier')}</option>
           </Select>
         </Field>
-        <Field label={t('user.pin')} hint={t('user.pinHint')}>
+        <Field label={t('user.pin')} hint={existingHasPin ? t('user.pinKeepHint') : t('user.pinHint')}>
           <Input
+            type="password"
             value={pin}
             inputMode="numeric"
             maxLength={6}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, '');
+              setPin(v);
+              if (v) setClearPin(false);
+            }}
           />
         </Field>
+        {existingHasPin && !pin && (
+          <Checkbox checked={clearPin} onChange={setClearPin} label={t('user.pinClear')} />
+        )}
         <Field label={t('common.color')}>
           <ColorPicker value={color} onChange={setColor} colors={PALETTE} />
         </Field>

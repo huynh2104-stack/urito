@@ -794,4 +794,8 @@ export const en: Dictionary = {
   'feat.multilangCatalogDesc': 'Per-product translated names and converted display prices.',
   'feat.ecOrders': 'Online store order & stock sync',
   'feat.ecOrdersDesc': 'Import e-commerce orders and share inventory counts.',
+  'user.pinKeepHint': 'Leave blank to keep the current PIN.',
+  'user.pinClear': 'Clear PIN',
+  'auth.unlock': 'Unlock',
+  'auth.lockedOut': 'Too many attempts. Try again in {sec}s.',
 };
