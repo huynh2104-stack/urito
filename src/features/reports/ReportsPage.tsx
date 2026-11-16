@@ -3,25 +3,26 @@ import { Button, EmptyState, Stat, Tabs } from '@/components/ui';
 import { BarChart, DonutChart, HBarList } from '@/components/charts';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
-import { previousRange, rangeOf, type RangePreset } from '@/core/date';
+import { dayKey, previousRange, rangeOf, type RangePreset } from '@/core/date';
 import { formatAmount, formatNumber } from '@/core/money';
 import { PALETTE } from '@/db/defaults';
 import { useApp, useMoney, useT } from '@/store/app';
 import { downloadCsv, timestampedName } from '@/services/csv';
+import { growth } from '@/services/reports';
+import { ensureRollupsBuilt } from '@/services/rollups';
 import {
-  categoryStats,
-  employeeStats,
-  growth,
-  orderTypeStats,
-  paymentStats,
-  productStats,
-  revenueByDay,
-  revenueByHour,
-  summarise,
-  summariseTaxLines,
-} from '@/services/reports';
+  categoryStatsFromProductStats,
+  employeeStatsFromRollups,
+  orderTypeStatsFromRollups,
+  paymentStatsFromRollups,
+  productStatsFromRollups,
+  revenueByDayFromRollups,
+  revenueByHourFromRollups,
+  summariseRollups,
+  taxLinesFromRollups,
+} from '@/services/rollupQueries';
 import { RANGE_PRESETS, RangePicker } from './RangePicker';
-import type { Expense, Order } from '@/db/types';
+import type { DailyProductStatsRow, DailyStatsRow, Expense } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
 
 type TabKey = 'overview' | 'products' | 'time' | 'people';
@@ -60,27 +61,34 @@ export function ReportsPage() {
   );
   const prev = useMemo(() => previousRange(range), [range]);
 
-  const orders = useLiveQuery(
-    async () => db.orders.where('paidAt').between(range.from, range.to, true, true).toArray(),
-    [range.from, range.to],
-    [] as Order[],
+  const fromDay = dayKey(range.from);
+  const toDay = dayKey(range.to);
+  const prevFromDay = dayKey(prev.from);
+  const prevToDay = dayKey(prev.to);
+
+  const dayRows = useLiveQuery(
+    async () => {
+      await ensureRollupsBuilt();
+      return db.dailyStats.where('day').between(fromDay, toDay, true, true).toArray();
+    },
+    [fromDay, toDay],
+    [] as DailyStatsRow[],
   );
-  const refundOrders = useLiveQuery(
-    async () =>
-      db.orders.filter((o) => o.refunds.some((r) => r.at >= range.from && r.at <= range.to)).toArray(),
-    [range.from, range.to],
-    [] as Order[],
+  const prodRows = useLiveQuery(
+    async () => {
+      await ensureRollupsBuilt();
+      return db.dailyProductStats.where('day').between(fromDay, toDay, true, true).toArray();
+    },
+    [fromDay, toDay],
+    [] as DailyProductStatsRow[],
   );
-  const prevOrders = useLiveQuery(
-    async () => db.orders.where('paidAt').between(prev.from, prev.to, true, true).toArray(),
-    [prev.from, prev.to],
-    [] as Order[],
-  );
-  const prevRefundOrders = useLiveQuery(
-    async () =>
-      db.orders.filter((o) => o.refunds.some((r) => r.at >= prev.from && r.at <= prev.to)).toArray(),
-    [prev.from, prev.to],
-    [] as Order[],
+  const prevDayRows = useLiveQuery(
+    async () => {
+      await ensureRollupsBuilt();
+      return db.dailyStats.where('day').between(prevFromDay, prevToDay, true, true).toArray();
+    },
+    [prevFromDay, prevToDay],
+    [] as DailyStatsRow[],
   );
   const expenses = useLiveQuery(
     async () => db.expenses.where('at').between(range.from, range.to, true, true).toArray(),
@@ -90,26 +98,21 @@ export function ReportsPage() {
   const products = useLiveQuery(async () => db.products.toArray(), [], []);
   const categories = useLiveQuery(async () => db.categories.toArray(), [], []);
 
-  const summary = useMemo(
-    () => summarise(orders, expenses, refundOrders, range),
-    [orders, expenses, refundOrders, range],
-  );
-  const taxLines = useMemo(() => summariseTaxLines(orders), [orders]);
-  const prevSummary = useMemo(
-    () => summarise(prevOrders, [], prevRefundOrders, prev),
-    [prevOrders, prevRefundOrders, prev],
-  );
+  const summary = useMemo(() => summariseRollups(dayRows, expenses), [dayRows, expenses]);
+  const taxLines = useMemo(() => taxLinesFromRollups(dayRows), [dayRows]);
+  const prevSummary = useMemo(() => summariseRollups(prevDayRows), [prevDayRows]);
   const byDay = useMemo(
-    () => revenueByDay(orders, range.from, range.to, refundOrders, settings.lang),
-    [orders, range.from, range.to, refundOrders, settings.lang],
+    () => revenueByDayFromRollups(dayRows, range.from, range.to, settings.lang),
+    [dayRows, range.from, range.to, settings.lang],
   );
-  const byHour = useMemo(() => revenueByHour(orders), [orders]);
-  const top = useMemo(() => productStats(orders), [orders]);
+  const byHour = useMemo(() => revenueByHourFromRollups(dayRows), [dayRows]);
+  const top = useMemo(() => productStatsFromRollups(prodRows), [prodRows]);
   const catNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
-  const byCategory = useMemo(() => categoryStats(orders, products), [orders, products]);
-  const byPayment = useMemo(() => paymentStats(orders), [orders]);
-  const byEmployee = useMemo(() => employeeStats(orders), [orders]);
-  const byType = useMemo(() => orderTypeStats(orders), [orders]);
+  const byCategory = useMemo(() => categoryStatsFromProductStats(top, products), [top, products]);
+  const byPayment = useMemo(() => paymentStatsFromRollups(dayRows), [dayRows]);
+  const byEmployee = useMemo(() => employeeStatsFromRollups(dayRows), [dayRows]);
+  const byType = useMemo(() => orderTypeStatsFromRollups(dayRows), [dayRows]);
+  const hasData = summary.orderCount > 0 || summary.voidCount > 0 || summary.refunds > 0;
 
   const peak = byHour.reduce((best, cur) => (cur.value > best.value ? cur : best), byHour[0]);
 
@@ -155,7 +158,7 @@ export function ReportsPage() {
         </div>
         <div className="row gap-8">
           <RangePicker preset={preset} onPreset={setPreset} range={custom} onRange={setCustom} presets={RANGE_PRESETS} />
-          <Button icon="download" onClick={exportCsv} disabled={!orders.length}>
+          <Button icon="download" onClick={exportCsv} disabled={!hasData}>
             {t('rep.exportCsv')}
           </Button>
         </div>
@@ -189,7 +192,7 @@ export function ReportsPage() {
 
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
-      {orders.length === 0 ? (
+      {!hasData ? (
         <div className="card mt-16">
           <EmptyState icon="chart" title={t('rep.noData')} />
         </div>

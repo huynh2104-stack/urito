@@ -798,6 +798,8 @@ export const vi = {
   'user.pinClear': 'Xoá mã PIN',
   'auth.unlock': 'Mở khoá',
   'auth.lockedOut': 'Nhập sai nhiều lần. Vui lòng thử lại sau {sec} giây.',
+  'bak.rebuildRollups': 'Tạo lại dữ liệu tổng hợp',
+  'bak.rebuildDone': 'Đã xây dựng lại dữ liệu tổng hợp.',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

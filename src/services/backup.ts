@@ -1,4 +1,5 @@
-import { db, kvDelete, kvGet, kvSet, BACKUP_TABLES, type BackupTable } from '@/db/db';
+import { clearDbDirty, db, kvDelete, kvGet, kvSet, BACKUP_TABLES, type BackupTable } from '@/db/db';
+import { rebuildRollups } from './rollups';
 import { hashPin } from '@/core/pin';
 import type { Order, Settings, StockMovement } from '@/db/types';
 
@@ -34,7 +35,7 @@ declare global {
 
 const HANDLE_KEY = 'backup.dirHandle';
 const FILE_PREFIX = 'urito-backup-';
-export const BACKUP_FORMAT = 1;
+export const BACKUP_FORMAT = 2;
 
 export interface Snapshot {
   app: 'urito';
@@ -77,9 +78,39 @@ export async function createSnapshot(appVersion: string): Promise<Snapshot> {
   };
 }
 
-export function snapshotFileName(at = new Date()): string {
+export function isGzipSupported(): boolean {
+  return typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined';
+}
+
+export function snapshotFileName(at = new Date(), gzip = isGzipSupported()): string {
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${FILE_PREFIX}${at.getFullYear()}${p(at.getMonth() + 1)}${p(at.getDate())}-${p(at.getHours())}${p(at.getMinutes())}${p(at.getSeconds())}.json`;
+  const ext = gzip ? '.json.gz' : '.json';
+  return `${FILE_PREFIX}${at.getFullYear()}${p(at.getMonth() + 1)}${p(at.getDate())}-${p(at.getHours())}${p(at.getMinutes())}${p(at.getSeconds())}${ext}`;
+}
+
+export async function gzipCompressString(text: string): Promise<Uint8Array<ArrayBuffer>> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+export async function gzipDecompressBytes(buf: ArrayBuffer): Promise<string> {
+  const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+}
+
+export async function encodeSnapshotBlob(snapshot: Snapshot): Promise<{ fileName: string; blob: Blob }> {
+  if (isGzipSupported()) {
+    const compressed = await gzipCompressString(JSON.stringify(snapshot));
+    return {
+      fileName: snapshotFileName(new Date(snapshot.createdAt), true),
+      blob: new Blob([compressed], { type: 'application/gzip' }),
+    };
+  }
+  return {
+    fileName: snapshotFileName(new Date(snapshot.createdAt), false),
+    blob: new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' }),
+  };
 }
 
 export function isSnapshot(value: unknown): value is Snapshot {
@@ -228,11 +259,12 @@ export async function writeBackupToFolder(
   snapshot: Snapshot,
   keep: number,
 ): Promise<string> {
-  const name = snapshotFileName(new Date(snapshot.createdAt));
+  const { fileName: name, blob } = await encodeSnapshotBlob(snapshot);
   const fileHandle = await handle.getFileHandle(name, { create: true });
   const writable = await fileHandle.createWritable();
-  await writable.write(JSON.stringify(snapshot));
+  await writable.write(blob);
   await writable.close();
+  clearDbDirty();
 
   if (keep > 0) {
     const files = await listBackupFiles(handle);
@@ -247,12 +279,12 @@ export async function writeBackupToFolder(
   return name;
 }
 
-export function downloadSnapshot(snapshot: Snapshot): void {
-  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+export async function downloadSnapshot(snapshot: Snapshot): Promise<void> {
+  const { fileName, blob } = await encodeSnapshotBlob(snapshot);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = snapshotFileName(new Date(snapshot.createdAt));
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -261,10 +293,16 @@ export function downloadSnapshot(snapshot: Snapshot): void {
 
 /* -------------------------------------------------------------- restoring */
 
-export async function readSnapshotFile(file: File): Promise<Snapshot> {
-  const text = await file.text();
+export async function decodeSnapshotBuffer(buf: ArrayBuffer): Promise<Snapshot> {
+  const u8 = new Uint8Array(buf);
+  const isGzip = u8.length >= 2 && u8[0] === 0x1f && u8[1] === 0x8b;
+  const text = isGzip ? await gzipDecompressBytes(buf) : new TextDecoder().decode(u8);
   const parsed: unknown = JSON.parse(text);
   return validateSnapshot(parsed);
+}
+
+export async function readSnapshotFile(file: File): Promise<Snapshot> {
+  return decodeSnapshotBuffer(await file.arrayBuffer());
 }
 
 async function prepareUsersForImport(snapshot: Snapshot): Promise<Snapshot> {
@@ -296,6 +334,7 @@ export async function restoreSnapshot(snapshot: Snapshot): Promise<void> {
       if (Array.isArray(rows) && rows.length) await table.bulkPut(rows);
     }
   });
+  await rebuildRollups();
 }
 
 /* ---------------------------------------------------------- orchestration */
@@ -424,6 +463,7 @@ export async function mergeSnapshot(snapshot: Snapshot): Promise<MergeResult> {
     }
   });
 
+  await rebuildRollups();
   return result;
 }
 
@@ -432,7 +472,7 @@ export async function mergeSnapshot(snapshot: Snapshot): Promise<MergeResult> {
 export async function shareSnapshot(snapshot: Snapshot, title: string): Promise<'shared' | 'downloaded'> {
   const body = JSON.stringify(snapshot);
   // Android only shares whitelisted types, and .json is not on the list - .txt is.
-  const shareName = snapshotFileName(new Date(snapshot.createdAt)).replace(/\.json$/, '.txt');
+  const shareName = snapshotFileName(new Date(snapshot.createdAt), false).replace(/\.json$/, '.txt');
   const file = new File([body], shareName, { type: 'text/plain' });
   const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
   if (nav.share && nav.canShare?.({ files: [file] })) {
@@ -443,6 +483,6 @@ export async function shareSnapshot(snapshot: Snapshot, title: string): Promise<
       if (err instanceof DOMException && err.name === 'AbortError') return 'shared';
     }
   }
-  downloadSnapshot(snapshot);
+  await downloadSnapshot(snapshot);
   return 'downloaded';
 }

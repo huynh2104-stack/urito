@@ -5,8 +5,10 @@ import { pointsEarnedFor } from '@/core/cart';
 import { computeOrderRefund, refundAmountFor as coreRefundAmountFor } from '@/core/refund';
 import { divRound, effectiveTaxRateBp } from '@/core/tax';
 import { normaliseQty } from '@/core/money';
+import { reservedByOpenOrders } from '@/lib/useReserved';
 import { cartTotals, type CartState } from '@/store/cart';
 import { applyStockChanges } from './inventory';
+import { applyOrderRollupDelta } from './rollups';
 import type { Order, OrderItem, Payment, Refund, Settings, User } from '@/db/types';
 
 export interface OrderContext {
@@ -15,7 +17,17 @@ export interface OrderContext {
   shiftId: string | null;
 }
 
-const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers, db.kv, db.promotions];
+const orderTables = () => [
+  db.orders,
+  db.products,
+  db.stockMovements,
+  db.settings,
+  db.customers,
+  db.kv,
+  db.promotions,
+  db.dailyStats,
+  db.dailyProductStats,
+];
 
 function baseOrder(cart: CartState, ctx: OrderContext): Order {
   const totals = cartTotals(cart, ctx.settings);
@@ -67,19 +79,7 @@ function baseOrder(cart: CartState, ctx: OrderContext): Order {
   };
 }
 
-/** Units of each product already promised to parked tickets (held orders and
- *  live tables). They have not left the shelf yet, but they are spoken for. */
-export async function reservedByOpenOrders(excludeOrderId: string | null): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
-  await db.orders
-    .where('status')
-    .equals('open')
-    .each((o) => {
-      if (o.id === excludeOrderId) return;
-      for (const i of o.items) map.set(i.productId, normaliseQty((map.get(i.productId) ?? 0) + i.qty));
-    });
-  return map;
-}
+export { reservedByOpenOrders };
 
 export class StockError extends Error {
   constructor(
@@ -105,6 +105,7 @@ export async function holdOrder(cart: CartState, ctx: OrderContext): Promise<Ord
   const order = baseOrder(cart, ctx);
   await db.transaction('rw', [db.orders, db.kv], async () => {
     await db.orders.put(order);
+    await applyOrderRollupDelta(null, order);
     await db.kv.delete('cart.draft');
   });
   return order;
@@ -246,7 +247,7 @@ export async function voidOrder(
       });
     }
 
-    await db.orders.put({
+    const updatedOrder: Order = {
       ...fresh,
       status: 'void',
       refunds,
@@ -255,7 +256,9 @@ export async function voidOrder(
       voidedAt: now,
       voidReason: reason,
       updatedAt: now,
-    });
+    };
+    await db.orders.put(updatedOrder);
+    await applyOrderRollupDelta(fresh, updatedOrder);
 
     if (wasPaid) {
       await applyStockChanges(
@@ -346,7 +349,7 @@ export async function refundOrder(input: RefundInput): Promise<number> {
     };
 
     const fullyRefunded = items.every((i) => i.refundedQty >= i.qty);
-    await db.orders.put({
+    const updatedOrder: Order = {
       ...fresh,
       items,
       refunds: [...fresh.refunds, refund],
@@ -354,7 +357,9 @@ export async function refundOrder(input: RefundInput): Promise<number> {
       dueAmount: Math.max(0, fresh.dueAmount - debtOffset),
       status: fullyRefunded ? 'refunded' : fresh.status,
       updatedAt: now,
-    });
+    };
+    await db.orders.put(updatedOrder);
+    await applyOrderRollupDelta(fresh, updatedOrder);
 
     if (input.restock) {
       await applyStockChanges(

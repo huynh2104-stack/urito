@@ -405,3 +405,52 @@ export interface KV {
   key: string;
   value: unknown;
 }
+
+/* ------------------------------------------------------------ rollups (C-04) */
+
+export interface DailyHourBucket {
+  value: number;
+  count: number;
+}
+
+export interface DailyCountBucket {
+  value: number;
+  count: number;
+}
+
+export interface DailyUserBucket {
+  name: string;
+  value: number;
+  count: number;
+}
+
+export interface DailyStatsRow {
+  day: string;
+  revenue: number;
+  refunds: number;
+  netRevenue: number;
+  cogs: number;
+  grossProfit: number;
+  tax: number;
+  discount: number;
+  serviceCharge: number;
+  orderCount: number;
+  itemsSold: number;
+  voidCount: number;
+  byPayment: Record<string, DailyCountBucket>;
+  byHour: DailyHourBucket[];
+  byType: Record<string, DailyCountBucket>;
+  byUser: Record<string, DailyUserBucket>;
+  byChannel: Record<string, DailyCountBucket>;
+  taxLines: Record<string, TaxLine>;
+  updatedAt: number;
+}
+
+export interface DailyProductStatsRow {
+  day: string;
+  productId: string;
+  name: string;
+  qty: number;
+  revenue: number;
+  profit: number;
+}

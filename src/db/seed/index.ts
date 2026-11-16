@@ -6,6 +6,7 @@ import { db } from '../db';
 import { docPrefixes, PALETTE, defaultOwner, defaultSettings } from '../defaults';
 import { EN_CATALOG } from './en';
 import { JA_CATALOG } from './ja';
+import { buildRollupsFromOrders } from '@/services/rollups';
 import { scaleCurrency, type MarketCatalog, type MarketSeedSet } from './types';
 import { VI_CATALOG } from './vi';
 import type {
@@ -109,6 +110,8 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
       db.diningTables,
       db.customers,
       db.orders,
+      db.dailyStats,
+      db.dailyProductStats,
       db.kv,
     ],
     async () => {
@@ -246,6 +249,9 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
       if (opts.withSampleHistory) {
         const result = buildSampleOrders(products, owner, settings, opts.businessType, debtCustomer);
         await db.orders.bulkPut(result.orders);
+        const rollups = buildRollupsFromOrders(result.orders);
+        if (rollups.daily.length) await db.dailyStats.bulkPut(rollups.daily);
+        if (rollups.products.length) await db.dailyProductStats.bulkPut(rollups.products);
         if (result.debtCustomer.debt > 0) {
           await db.customers.put(result.debtCustomer);
         }
@@ -254,6 +260,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
       }
 
       await db.kv.bulkPut([
+        { key: 'rollups.v1.built', value: Date.now() },
         { key: 'seq.order', value: nextOrderSeq - 1 },
         { key: 'seq.sku', value: products.length },
         { key: 'seq.customer', value: 2 },
@@ -264,13 +271,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
   return settings;
 }
 
-export async function loadOrInitSettings(): Promise<Settings> {
-  const existing = await db.settings.get('app');
-  if (existing) return existing;
-  const fresh = defaultSettings();
-  await db.settings.put(fresh);
-  return fresh;
-}
+export { loadOrInitSettings } from './init';
 
 /* ------------------------------------------------------------ サンプル取引履歴 */
 

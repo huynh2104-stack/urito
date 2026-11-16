@@ -1,33 +1,33 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Shell } from './components/Shell';
-import { ConfirmHost, Spinner, ToastHost } from './components/ui';
+import { Button, ConfirmHost, EmptyState, Spinner, ToastHost } from './components/ui';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrintHost } from './print/PrintHost';
-import { useRoute } from './router';
+import { navigate, useRoute } from './router';
 import { can, ROUTE_PERMISSION, useApp, useT } from './store/app';
-import { navigate } from './router';
-import { Button, EmptyState } from './components/ui';
 import { useAutoBackup } from './features/backup/useAutoBackup';
-import { OnboardingPage } from './features/onboarding/OnboardingPage';
-import { LoginPage } from './features/auth/LoginPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
 import { PosPage } from './features/pos/PosPage';
-import { TablesPage } from './features/tables/TablesPage';
-import { OrdersPage } from './features/orders/OrdersPage';
-import { ProductsPage } from './features/products/ProductsPage';
-import { InventoryPage } from './features/inventory/InventoryPage';
-import { CustomersPage } from './features/customers/CustomersPage';
-import { SuppliersPage } from './features/suppliers/SuppliersPage';
-import { PurchasesPage } from './features/purchases/PurchasesPage';
-import { ShiftsPage } from './features/shifts/ShiftsPage';
-import { ExpensesPage } from './features/expenses/ExpensesPage';
-import { PromotionsPage } from './features/promotions/PromotionsPage';
-import { ReportsPage } from './features/reports/ReportsPage';
-import { UsersPage } from './features/users/UsersPage';
-import { SettingsPage } from './features/settings/SettingsPage';
-import { BackupPage } from './features/backup/BackupPage';
-import { LabelsPage } from './features/products/LabelsPage';
-import { RoadmapPage } from './features/roadmap/RoadmapPage';
+
+// C-05: 起動直後に必須の POS / Shell 以外は画面単位で遅延読込する
+const OnboardingPage = lazy(() => import('./features/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
+const LoginPage = lazy(() => import('./features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
+const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const TablesPage = lazy(() => import('./features/tables/TablesPage').then((m) => ({ default: m.TablesPage })));
+const OrdersPage = lazy(() => import('./features/orders/OrdersPage').then((m) => ({ default: m.OrdersPage })));
+const ProductsPage = lazy(() => import('./features/products/ProductsPage').then((m) => ({ default: m.ProductsPage })));
+const InventoryPage = lazy(() => import('./features/inventory/InventoryPage').then((m) => ({ default: m.InventoryPage })));
+const CustomersPage = lazy(() => import('./features/customers/CustomersPage').then((m) => ({ default: m.CustomersPage })));
+const SuppliersPage = lazy(() => import('./features/suppliers/SuppliersPage').then((m) => ({ default: m.SuppliersPage })));
+const PurchasesPage = lazy(() => import('./features/purchases/PurchasesPage').then((m) => ({ default: m.PurchasesPage })));
+const ShiftsPage = lazy(() => import('./features/shifts/ShiftsPage').then((m) => ({ default: m.ShiftsPage })));
+const ExpensesPage = lazy(() => import('./features/expenses/ExpensesPage').then((m) => ({ default: m.ExpensesPage })));
+const PromotionsPage = lazy(() => import('./features/promotions/PromotionsPage').then((m) => ({ default: m.PromotionsPage })));
+const ReportsPage = lazy(() => import('./features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const UsersPage = lazy(() => import('./features/users/UsersPage').then((m) => ({ default: m.UsersPage })));
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const BackupPage = lazy(() => import('./features/backup/BackupPage').then((m) => ({ default: m.BackupPage })));
+const LabelsPage = lazy(() => import('./features/products/LabelsPage').then((m) => ({ default: m.LabelsPage })));
+const RoadmapPage = lazy(() => import('./features/roadmap/RoadmapPage').then((m) => ({ default: m.RoadmapPage })));
 
 function NoPermission() {
   const t = useT();
@@ -124,7 +124,9 @@ function AppInner() {
   if (!settings.onboarded) {
     return (
       <>
-        <OnboardingPage />
+        <Suspense fallback={<div className="full-center"><Spinner /></div>}>
+          <OnboardingPage />
+        </Suspense>
         <ToastHost />
         <ConfirmHost />
       </>
@@ -134,7 +136,9 @@ function AppInner() {
   if (!user) {
     return (
       <>
-        <LoginPage />
+        <Suspense fallback={<div className="full-center"><Spinner /></div>}>
+          <LoginPage />
+        </Suspense>
         <ToastHost />
         <ConfirmHost />
       </>
@@ -145,7 +149,9 @@ function AppInner() {
     <>
       <Shell>
         <ErrorBoundary scope="route">
-          <RouteView />
+          <Suspense fallback={<div className="page center"><Spinner /></div>}>
+            <RouteView />
+          </Suspense>
         </ErrorBoundary>
       </Shell>
       <ToastHost />

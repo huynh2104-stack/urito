@@ -6,6 +6,8 @@ import type {
   CashMovement,
   Category,
   Customer,
+  DailyProductStatsRow,
+  DailyStatsRow,
   DiningTable,
   Expense,
   KV,
@@ -21,6 +23,28 @@ import type {
   Supplier,
   User,
 } from './types';
+
+/** Tables included in a backup snapshot, in restore order. */
+export const BACKUP_TABLES = [
+  'settings',
+  'users',
+  'categories',
+  'modifierGroups',
+  'products',
+  'customers',
+  'suppliers',
+  'areas',
+  'diningTables',
+  'orders',
+  'stockMovements',
+  'purchases',
+  'shifts',
+  'cashMovements',
+  'expenses',
+  'promotions',
+] as const;
+
+export type BackupTable = (typeof BACKUP_TABLES)[number];
 
 /** すべてのデータはブラウザの IndexedDB に保存する（サーバー不要・運用費ゼロ）。 */
 export class UritoDB extends Dexie {
@@ -41,6 +65,8 @@ export class UritoDB extends Dexie {
   cashMovements!: Table<CashMovement, string>;
   expenses!: Table<Expense, string>;
   promotions!: Table<Promotion, string>;
+  dailyStats!: Table<DailyStatsRow, string>;
+  dailyProductStats!: Table<DailyProductStatsRow, [string, string]>;
   kv!: Table<KV, string>;
 
   constructor(name = 'urito') {
@@ -48,6 +74,20 @@ export class UritoDB extends Dexie {
     for (const m of MIGRATIONS) {
       const builder = this.version(m.version).stores(m.stores);
       if (m.upgrade) builder.upgrade(m.upgrade);
+    }
+    if (name !== DEMO_DB_NAME) {
+      for (const tblName of BACKUP_TABLES) {
+        const tbl = this.table(tblName);
+        tbl.hook('creating', () => {
+          markDbDirty();
+        });
+        tbl.hook('updating', () => {
+          markDbDirty();
+        });
+        tbl.hook('deleting', () => {
+          markDbDirty();
+        });
+      }
     }
   }
 }
@@ -101,6 +141,50 @@ export function clearDemoScenarioStorage(storage = safeSessionStorage()): void {
   storage?.removeItem(DEMO_SESSION_KEY);
 }
 
+
+const DIRTY_KEY = 'urito.backup.dirty';
+let dbDirtyMem = false;
+let suppressDirtyDepth = 0;
+
+/** C-06: 自動バックアップ後にいずれかの業務テーブルが更新されたかを返す。 */
+export function isDbDirty(): boolean {
+  if (dbDirtyMem) return true;
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(DIRTY_KEY) === '1';
+  } catch {
+    return dbDirtyMem;
+  }
+}
+
+export function markDbDirty(): void {
+  if (suppressDirtyDepth > 0) return;
+  dbDirtyMem = true;
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(DIRTY_KEY, '1');
+  } catch {
+    /* プライベート環境等で localStorage が使えない場合はメモリ保持のみ行う */
+  }
+}
+
+export function clearDbDirty(): void {
+  dbDirtyMem = false;
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(DIRTY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** バックアップ時刻保存など内部メタデータ更新中に dirty フラグを立てないためのラッパー。 */
+export async function withoutDirtyTracking<T>(fn: () => Promise<T>): Promise<T> {
+  suppressDirtyDepth += 1;
+  try {
+    return await fn();
+  } finally {
+    suppressDirtyDepth -= 1;
+  }
+}
+
 export const db = new UritoDB(resolveDbName());
 
 export function isDemoMode(): boolean {
@@ -120,27 +204,6 @@ export function ensureDbOpen(): Promise<void> {
   return openReady;
 }
 
-/** Tables included in a backup snapshot, in restore order. */
-export const BACKUP_TABLES = [
-  'settings',
-  'users',
-  'categories',
-  'modifierGroups',
-  'products',
-  'customers',
-  'suppliers',
-  'areas',
-  'diningTables',
-  'orders',
-  'stockMovements',
-  'purchases',
-  'shifts',
-  'cashMovements',
-  'expenses',
-  'promotions',
-] as const;
-
-export type BackupTable = (typeof BACKUP_TABLES)[number];
 
 export async function kvGet<T>(key: string): Promise<T | undefined> {
   const row = await db.kv.get(key);

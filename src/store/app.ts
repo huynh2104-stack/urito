@@ -12,12 +12,11 @@ import {
   setDemoScenarioStorage,
   type DemoScenario,
 } from '@/db/db';
-import { loadOrInitSettings, seedWorkspace } from '@/db/seed';
-import { BACKGROUND_TASKS, runBackgroundMigrations } from '@/db/migrations/background';
+import { loadOrInitSettings } from '@/db/seed/init';
 import { hasPin } from '@/core/pin';
 import { ensureFontsForLang } from '@/lib/fonts';
 import { defaultSettings } from '@/db/defaults';
-import { makeT, type TFunc } from '@/i18n';
+import { ensureLangDict, makeT, type TFunc } from '@/i18n';
 import { formatAmount, formatMoney } from '@/core/money';
 import type { BusinessType, Role, Settings, Shift, User } from '@/db/types';
 import { initCartDraft, useCart } from './cart';
@@ -30,6 +29,7 @@ const DEMO_CONFIG: Record<DemoScenario, { businessType: BusinessType; shopName: 
 
 async function seedDemoScenario(scenario: DemoScenario): Promise<Settings> {
   const cfg = DEMO_CONFIG[scenario];
+  const { seedWorkspace } = await import('@/db/seed');
   await Promise.all(db.tables.map((t) => t.clear()));
   useCart.getState().clear();
   return seedWorkspace({
@@ -91,14 +91,17 @@ export const useApp = create<AppState>()((set, get) => ({
     if (demoScenario && !settings.onboarded) {
       settings = await seedDemoScenario(demoScenario);
     }
+    await ensureLangDict(settings.lang);
     applyDomSettings(settings);
 
     settingsSub?.unsubscribe();
     settingsSub = liveQuery(() => db.settings.get('app')).subscribe({
       next: (fresh) => {
         if (!fresh) return;
-        applyDomSettings(fresh);
-        set({ settings: fresh });
+        void ensureLangDict(fresh.lang).then(() => {
+          applyDomSettings(fresh);
+          set({ settings: fresh });
+        });
       },
     });
 
@@ -120,7 +123,8 @@ export const useApp = create<AppState>()((set, get) => ({
     const shift = user ? await findOpenShift(user.id) : null;
     set({ ready: true, settings, users, user, shift, demoScenario });
     await initCartDraft();
-    void runBackgroundMigrations(BACKGROUND_TASKS)
+    void import('@/db/migrations/background')
+      .then(({ BACKGROUND_TASKS, runBackgroundMigrations }) => runBackgroundMigrations(BACKGROUND_TASKS))
       .then(() => get().reloadUsers())
       .catch(() => {});
   },
@@ -128,6 +132,7 @@ export const useApp = create<AppState>()((set, get) => ({
   async switchDemoScenario(scenario) {
     setDemoScenarioStorage(scenario);
     const settings = await seedDemoScenario(scenario);
+    await ensureLangDict(settings.lang);
     applyDomSettings(settings);
     const users = await db.users.filter((u) => u.active).toArray();
     const user = users.find((u) => u.role === 'owner') ?? users[0] ?? null;
@@ -151,6 +156,7 @@ export const useApp = create<AppState>()((set, get) => ({
 
   async reloadSettings() {
     const settings = await loadOrInitSettings();
+    await ensureLangDict(settings.lang);
     applyDomSettings(settings);
     set({ settings });
   },
@@ -170,6 +176,7 @@ export const useApp = create<AppState>()((set, get) => ({
       await db.settings.put(updated);
       return updated;
     });
+    await ensureLangDict(next.lang);
     applyDomSettings(next);
     set({ settings: next });
   },

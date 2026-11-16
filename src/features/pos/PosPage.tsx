@@ -1,23 +1,22 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { useApp, useT } from '@/store/app';
 import { useCart, useCartTotals } from '@/store/cart';
 import { toast, confirmDialog, useUI } from '@/store/ui';
 import { useReserved } from '@/lib/useReserved';
-import { holdOrder } from '@/services/orders';
 import { navigate, useRoute } from '@/router';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
-import { ModifierModal } from './ModifierModal';
-import { PaymentModal } from './PaymentModal';
-import { CustomerPickerModal } from './CustomerPicker';
-import { HeldOrdersModal } from './HeldOrders';
-import { LineEditorModal } from './LineEditor';
-import { DiscountModal } from './DiscountModal';
-import { TablePickerModal } from './TablePicker';
-import { CameraScanner } from '@/components/CameraScanner';
-import { CustomItemModal } from './CustomItemModal';
+const ModifierModal = lazy(() => import('./ModifierModal').then((m) => ({ default: m.ModifierModal })));
+const PaymentModal = lazy(() => import('./PaymentModal').then((m) => ({ default: m.PaymentModal })));
+const CustomerPickerModal = lazy(() => import('./CustomerPicker').then((m) => ({ default: m.CustomerPickerModal })));
+const HeldOrdersModal = lazy(() => import('./HeldOrders').then((m) => ({ default: m.HeldOrdersModal })));
+const LineEditorModal = lazy(() => import('./LineEditor').then((m) => ({ default: m.LineEditorModal })));
+const DiscountModal = lazy(() => import('./DiscountModal').then((m) => ({ default: m.DiscountModal })));
+const TablePickerModal = lazy(() => import('./TablePicker').then((m) => ({ default: m.TablePickerModal })));
+const CameraScanner = lazy(() => import('@/components/CameraScanner').then((m) => ({ default: m.CameraScanner })));
+const CustomItemModal = lazy(() => import('./CustomItemModal').then((m) => ({ default: m.CustomItemModal })));
 import { Icon } from '@/components/Icon';
 import { flyToCart } from '@/lib/fly';
 import { DAY } from '@/core/date';
@@ -181,6 +180,7 @@ export function PosPage() {
   const doHold = async () => {
     const cartState = useCart.getState();
     if (!cartState.items.length) return;
+    const { holdOrder } = await import('@/services/orders');
     await holdOrder(cartState, { user, settings, shiftId: shift?.id ?? null });
     useCart.getState().clear();
     toast.success(t('pos.hold'));
@@ -279,6 +279,7 @@ export function PosPage() {
         products={products}
       />
 
+      <Suspense fallback={null}>
       {pendingProduct && (
         <ModifierModal
           product={pendingProduct}
@@ -313,6 +314,7 @@ export function PosPage() {
       {showHeld && <HeldOrdersModal onClose={() => setShowHeld(false)} />}
       {showDiscount && <DiscountModal onClose={() => setShowDiscount(false)} />}
       {showTables && <TablePickerModal onClose={() => setShowTables(false)} />}
+      </Suspense>
     </div>
   );
 }

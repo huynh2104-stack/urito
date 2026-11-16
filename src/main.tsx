@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { requestPersistentStorage } from './services/backup';
 import { installKeyboardTracking } from './lib/keyboard';
 import { installGlobalErrorLogging } from './lib/errorLog';
 import { registerServiceWorker } from './lib/sw';
@@ -17,7 +16,12 @@ createRoot(document.getElementById('root')!).render(
 );
 
 /* ディスク逼迫時にブラウザが IndexedDB を消去しないよう永続化ストレージを要求する。 */
-void requestPersistentStorage();
+if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+  void navigator.storage
+    .persisted?.()
+    .then((persisted) => (persisted ? true : navigator.storage.persist()))
+    .catch(() => {});
+}
 installKeyboardTracking();
 installGlobalErrorLogging();
 registerServiceWorker();

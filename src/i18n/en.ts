@@ -798,4 +798,6 @@ export const en: Dictionary = {
   'user.pinClear': 'Clear PIN',
   'auth.unlock': 'Unlock',
   'auth.lockedOut': 'Too many attempts. Try again in {sec}s.',
+  'bak.rebuildRollups': 'Rebuild analytics cache',
+  'bak.rebuildDone': 'Rebuilt analytics summary cache.',
 };

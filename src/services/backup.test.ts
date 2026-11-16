@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { db } from '@/db/db';
-import { BackupValidationError, createSnapshot, mergeSnapshot, restoreSnapshot, type Snapshot } from './backup';
+import { clearDbDirty, db, isDbDirty, withoutDirtyTracking } from '@/db/db';
+import { BackupValidationError, createSnapshot, decodeSnapshotBuffer, encodeSnapshotBlob, isGzipSupported, mergeSnapshot, restoreSnapshot, type Snapshot } from './backup';
 import type { Customer, Order, Product, StockMovement } from '@/db/types';
 
 const now = Date.now();
@@ -158,5 +158,53 @@ describe('スナップショット復元時のレコード単位バリデーシ�
     expect(saved.pin).toBe('');
     expect(saved.pinHash).toBeTruthy();
     expect(saved.pinSalt).toBeTruthy();
+  });
+});
+
+
+describe('Gzip圧縮バックアップと変更検知 (C-06)', () => {
+  beforeEach(async () => {
+    await Promise.all(db.tables.map((t) => t.clear()));
+    clearDbDirty();
+  });
+
+  it('format:2 スナップショットをgzip圧縮(.json.gz)しマジックバイト判定で復元できる', async () => {
+    await db.products.put(product());
+    const snap = await createSnapshot('test');
+    expect(snap.format).toBe(2);
+
+    const { fileName, blob } = await encodeSnapshotBlob(snap);
+    if (isGzipSupported()) {
+      expect(fileName.endsWith('.json.gz')).toBe(true);
+      const buf = await blob.arrayBuffer();
+      const head = new Uint8Array(buf);
+      expect(head[0]).toBe(0x1f);
+      expect(head[1]).toBe(0x8b);
+      const decoded = await decodeSnapshotBuffer(buf);
+      expect(decoded.format).toBe(2);
+      expect((decoded.data.products[0] as Product).name).toBe('Coca');
+    }
+  });
+
+  it('旧形式(format:1)の非圧縮JSONファイルも後方互換で読み込める', async () => {
+    await db.products.put(product());
+    const snap = { ...(await createSnapshot('test')), format: 1 };
+    const plain = new TextEncoder().encode(JSON.stringify(snap)).buffer;
+    const decoded = await decodeSnapshotBuffer(plain);
+    expect(decoded.format).toBe(1);
+    expect(decoded.data.products).toHaveLength(1);
+  });
+
+  it('テーブル変更でdirtyになり clearDbDirty / withoutDirtyTracking が正しく動作する', async () => {
+    expect(isDbDirty()).toBe(false);
+    await db.products.put(product());
+    expect(isDbDirty()).toBe(true);
+    clearDbDirty();
+    expect(isDbDirty()).toBe(false);
+
+    await withoutDirtyTracking(async () => {
+      await db.settings.put({ id: 'app', shopName: 'Urito' } as never);
+    });
+    expect(isDbDirty()).toBe(false);
   });
 });

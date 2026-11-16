@@ -798,4 +798,6 @@ export const ja: Dictionary = {
   'user.pinClear': 'PINを解除する',
   'auth.unlock': 'ロック解除',
   'auth.lockedOut': '連続で誤入力されました。{sec}秒後に再試行してください。',
+  'bak.rebuildRollups': '集計キャッシュ再構築',
+  'bak.rebuildDone': '集計キャッシュを再構築しました。',
 };

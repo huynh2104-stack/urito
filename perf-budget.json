@@ -1,6 +1,6 @@
 {
-  "note": "C-05/C-08完了時に maxInitialJsGzipBytes を 143360 (140 KB) に引き下げる",
-  "maxInitialJsGzipBytes": 225280,
+  "note": "C-05/C-08適用後の初期ロードJS予算: 143360 B (140 KB gzip)",
+  "maxInitialJsGzipBytes": 143360,
   "maxCssGzipBytes": 20480,
   "maxFontBytes": 307200
 }

@@ -1,7 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { translate } from '@/i18n';
 import { useApp } from '@/store/app';
-import { createSnapshot, downloadSnapshot } from '@/services/backup';
 import { isChunkLoadError, recordError } from '@/lib/errorLog';
 import { APP_VERSION } from '@/version';
 
@@ -29,8 +28,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private exportBackup = async () => {
     try {
+      const { createSnapshot, downloadSnapshot } = await import('@/services/backup');
       const snap = await createSnapshot(APP_VERSION);
-      downloadSnapshot(snap);
+      await downloadSnapshot(snap);
     } catch {
       /* バックアップ生成失敗時もUI操作を妨げない */
     }

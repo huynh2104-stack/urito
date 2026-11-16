@@ -4,12 +4,14 @@ import { BarChart, HBarList } from '@/components/charts';
 import { Icon } from '@/components/Icon';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
-import { DAY, formatTime, rangeOf, startOfDay } from '@/core/date';
+import { dayKey, DAY, formatTime, rangeOf, startOfDay } from '@/core/date';
 import { useApp, useCan, useMoney, useT } from '@/store/app';
 import { navigate } from '@/router';
-import { growth, productStats, revenueByDay, summarise } from '@/services/reports';
+import { growth } from '@/services/reports';
+import { ensureRollupsBuilt } from '@/services/rollups';
+import { productStatsFromRollups, revenueByDayFromRollups, summariseRollups } from '@/services/rollupQueries';
 import { summariseStock } from '@/services/inventory';
-import type { Order } from '@/db/types';
+import type { DailyProductStatsRow, DailyStatsRow, Order } from '@/db/types';
 
 export function DashboardPage() {
   const t = useT();
@@ -21,14 +23,35 @@ export function DashboardPage() {
 
   const [now] = useState(() => Date.now());
   const since = startOfDay(now - 7 * DAY);
-  const orders = useLiveQuery(
-    async () => db.orders.where('paidAt').aboveOrEqual(since).toArray(),
-    [since],
-    [] as Order[],
+  const today = rangeOf('today', now);
+  const yesterday = rangeOf('yesterday', now);
+  const todayDay = dayKey(today.from);
+  const yesterdayDay = dayKey(yesterday.from);
+  const sinceDay = dayKey(since);
+  const nowDay = dayKey(now);
+
+  const dailyRows = useLiveQuery(
+    async () => {
+      await ensureRollupsBuilt();
+      return db.dailyStats.where('day').between(sinceDay, nowDay, true, true).toArray();
+    },
+    [sinceDay, nowDay],
+    [] as DailyStatsRow[],
   );
-  const refundOrders = useLiveQuery(
-    async () => db.orders.filter((o) => o.refunds.some((r) => r.at >= since)).toArray(),
-    [since],
+  const todayProdRows = useLiveQuery(
+    async () => {
+      await ensureRollupsBuilt();
+      return db.dailyProductStats.where('day').equals(todayDay).toArray();
+    },
+    [todayDay],
+    [] as DailyProductStatsRow[],
+  );
+  const recent = useLiveQuery(
+    async () => {
+      const list = await db.orders.where('paidAt').between(today.from, today.to, true, true).reverse().limit(12).toArray();
+      return list.filter((o) => o.status !== 'open').slice(0, 6);
+    },
+    [today.from, today.to],
     [] as Order[],
   );
   const products = useLiveQuery(async () => db.products.toArray(), [], []);
@@ -38,41 +61,20 @@ export function DashboardPage() {
     [] as Order[],
   );
 
-  const today = useMemo(() => rangeOf('today', now), [now]);
-  const yesterday = useMemo(() => rangeOf('yesterday', now), [now]);
-
-  const inRange = (list: Order[], from: number, to: number) =>
-    list.filter((o) => {
-      const ts = o.paidAt;
-      return ts >= from && ts <= to;
-    });
-
-  const todayOrders = useMemo(() => inRange(orders, today.from, today.to), [orders, today.from, today.to]);
-  const yesterdayOrders = useMemo(
-    () => inRange(orders, yesterday.from, yesterday.to),
-    [orders, yesterday.from, yesterday.to],
+  const todaySummary = useMemo(
+    () => summariseRollups(dailyRows.filter((r) => r.day === todayDay)),
+    [dailyRows, todayDay],
   );
-
-  const todaySummary = useMemo(() => summarise(todayOrders, [], refundOrders, today), [todayOrders, refundOrders, today]);
   const yesterdaySummary = useMemo(
-    () => summarise(yesterdayOrders, [], refundOrders, yesterday),
-    [yesterdayOrders, refundOrders, yesterday],
+    () => summariseRollups(dailyRows.filter((r) => r.day === yesterdayDay)),
+    [dailyRows, yesterdayDay],
   );
   const series = useMemo(
-    () => revenueByDay(orders, since, now, refundOrders, lang),
-    [orders, since, now, refundOrders, lang],
+    () => revenueByDayFromRollups(dailyRows, since, now, lang),
+    [dailyRows, since, now, lang],
   );
-  const top = useMemo(() => productStats(todayOrders).slice(0, 5), [todayOrders]);
+  const top = useMemo(() => productStatsFromRollups(todayProdRows).slice(0, 5), [todayProdRows]);
   const stock = useMemo(() => summariseStock(products), [products]);
-
-  const recent = useMemo(
-    () =>
-      [...todayOrders]
-        .filter((o) => o.status !== 'open')
-        .sort((a, b) => (b.paidAt || b.createdAt) - (a.paidAt || a.createdAt))
-        .slice(0, 6),
-    [todayOrders],
-  );
 
   const backupAgeDays = settings.backup.lastAt
     ? Math.floor((now - settings.backup.lastAt) / DAY)

@@ -1,14 +1,23 @@
-/** ビルド成果物のサイズ（生サイズ・gzip圧縮後）を集計し、perf-budget.json の上限を検証する。 */
+/** ビルド成果物のサイズ（初期ロードJS・遅延JS・CSS・フォント）を集計し、perf-budget.json の上限を検証する。 */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const ROOT = process.cwd();
-const ASSETS_DIR = join(ROOT, 'dist', 'assets');
+const DIST_DIR = join(ROOT, 'dist');
+const ASSETS_DIR = join(DIST_DIR, 'assets');
 const budget = JSON.parse(readFileSync(join(ROOT, 'perf-budget.json'), 'utf8'));
 
+// dist/index.html の <script src> と <link rel="modulepreload" href> から初期ロード対象チャンクを抽出する
+const indexHtml = readFileSync(join(DIST_DIR, 'index.html'), 'utf8');
+const initialJsNames = new Set();
+for (const m of indexHtml.matchAll(/(?:src|href)=["']\.?\/assets\/([^"']+\.js)["']/g)) {
+  initialJsNames.add(m[1]);
+}
+
 const files = readdirSync(ASSETS_DIR).sort();
-let jsGzipTotal = 0;
+let initialJsGzipTotal = 0;
+let allJsGzipTotal = 0;
 let cssGzipTotal = 0;
 let fontRawTotal = 0;
 
@@ -22,8 +31,11 @@ for (const name of files) {
 
   if (ext === '.js') {
     const gz = gzipSync(buf, { level: 9 }).length;
-    jsGzipTotal += gz;
-    console.log(`${name.padEnd(55)} ${rawKb.padStart(8)}   ${(gz / 1024).toFixed(2).padStart(9)}`);
+    allJsGzipTotal += gz;
+    const isInitial = initialJsNames.has(name);
+    if (isInitial) initialJsGzipTotal += gz;
+    const tag = isInitial ? ' [init]' : ' [lazy]';
+    console.log(`${(name + tag).padEnd(55)} ${rawKb.padStart(8)}   ${(gz / 1024).toFixed(2).padStart(9)}`);
   } else if (ext === '.css') {
     const gz = gzipSync(buf, { level: 9 }).length;
     cssGzipTotal += gz;
@@ -35,13 +47,19 @@ for (const name of files) {
 }
 
 console.log('----------------------------------------------------------------------------');
-console.log(`JS gzip合計  : ${(jsGzipTotal / 1024).toFixed(2)} KB / 上限 ${(budget.maxInitialJsGzipBytes / 1024).toFixed(2)} KB`);
+console.log(
+  `初期JS gzip  : ${(initialJsGzipTotal / 1024).toFixed(2)} KB / 上限 ${(budget.maxInitialJsGzipBytes / 1024).toFixed(2)} KB (全体JS gzip ${(allJsGzipTotal / 1024).toFixed(2)} KB)`,
+);
 console.log(`CSS gzip合計 : ${(cssGzipTotal / 1024).toFixed(2)} KB / 上限 ${(budget.maxCssGzipBytes / 1024).toFixed(2)} KB`);
 console.log(`Font合計     : ${(fontRawTotal / 1024).toFixed(2)} KB / 上限 ${(budget.maxFontBytes / 1024).toFixed(2)} KB`);
 
 let failed = false;
-if (jsGzipTotal > budget.maxInitialJsGzipBytes) {
-  console.error(`エラー: JS gzip合計 (${jsGzipTotal} B) が予算 (${budget.maxInitialJsGzipBytes} B) を超過しています`);
+if (initialJsNames.size === 0) {
+  console.error('エラー: dist/index.html から初期JSチャンクを検出できませんでした');
+  failed = true;
+}
+if (initialJsGzipTotal > budget.maxInitialJsGzipBytes) {
+  console.error(`エラー: 初期JS gzip合計 (${initialJsGzipTotal} B) が予算 (${budget.maxInitialJsGzipBytes} B) を超過しています`);
   failed = true;
 }
 if (cssGzipTotal > budget.maxCssGzipBytes) {
