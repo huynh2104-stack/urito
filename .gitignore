@@ -12,3 +12,4 @@ coverage
 docs/plan/
 .claude/
 assets-src/
+.omc/

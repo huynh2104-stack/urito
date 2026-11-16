@@ -9,7 +9,9 @@
 
 ## デモ
 
-ビルド後のショーケースサイト（`npm run build:showcase`）またはアプリ（`npm run dev` / `npm run preview`）に対して以下のデモクエリを付与すると、本番データベース（`urito`）と完全に隔離された `urito-demo` DB で 3 業種を試用できます。
+公開デモ（GitHub Pages）: https://huynh2104-stack.github.io/urito/ — 登録不要。入力したデータはお使いのブラウザ内にのみ保存されます。
+
+ローカルで試す場合は、ビルド後のショーケースサイト（`npm run build:showcase`）またはアプリ（`npm run dev` / `npm run preview`）に対して以下のデモクエリを付与すると、本番データベース（`urito`）と完全に隔離された `urito-demo` DB で 3 業種を試用できます。
 
 - **小売店（うりと商店）**: `?demo=ja-retail#/pos`（`?demo=1` でも起動） — バーコード商品 12 品・軽減税率 8%/10% 混在・過去 30 日分の販売履歴
 - **カフェ（喫茶うりと）**: `?demo=ja-cafe#/pos` — サイズ/トッピングオプション・店内飲食 10% / テイクアウト 8% 自動切替
