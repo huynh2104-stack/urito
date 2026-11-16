@@ -1,6 +1,7 @@
 import { db } from '@/db/db';
 import { formatCode, newId } from '@/core/id';
 import { pointsEarnedFor } from '@/core/cart';
+import { computeOrderRefund, refundAmountFor as coreRefundAmountFor } from '@/core/refund';
 import { normaliseQty } from '@/core/money';
 import { cartTotals, type CartState } from '@/store/cart';
 import { applyStockChanges } from './inventory';
@@ -237,14 +238,9 @@ export interface RefundInput {
   user: User | null;
 }
 
-/** Refund value of a line, proportional to how much of it is being returned
- *  (so order-level discounts are shared fairly across the returned items). */
+/** 1明細の返金額を算出する（注文レベルの割引・端数・ポイント・外税を考慮）。 */
 export function refundAmountFor(order: Order, item: OrderItem, qty: number): number {
-  if (item.qty <= 0) return 0;
-  const share = item.total / order.subtotal || 0;
-  const orderLevel = order.discount + order.rounding - order.pointsValue;
-  const lineNet = item.total + Math.round(share * (order.serviceCharge - orderLevel));
-  return Math.max(0, Math.round((lineNet * qty) / item.qty));
+  return coreRefundAmountFor(order, item, qty);
 }
 
 export async function refundOrder(input: RefundInput): Promise<number> {
@@ -254,20 +250,15 @@ export async function refundOrder(input: RefundInput): Promise<number> {
     if (!fresh) return 0;
     const now = Date.now();
 
-    let amount = 0;
-    const refundItems: Refund['items'] = [];
+    const computed = computeOrderRefund(fresh, lines);
+    if (!computed.items.length) return 0;
+    const amount = computed.totalAmount;
+    const refundItems = computed.items;
+    const qtyById = new Map(refundItems.map((r) => [r.itemId, r.qty]));
     const items = fresh.items.map((item) => {
-      const line = lines.find((l) => l.itemId === item.id);
-      if (!line || line.qty <= 0) return item;
-      const qty = Math.min(normaliseQty(line.qty), normaliseQty(item.qty - item.refundedQty));
-      if (qty <= 0) return item;
-      const value = refundAmountFor(fresh, item, qty);
-      amount += value;
-      refundItems.push({ itemId: item.id, qty, amount: value });
-      return { ...item, refundedQty: normaliseQty(item.refundedQty + qty) };
+      const q = qtyById.get(item.id);
+      return q ? { ...item, refundedQty: normaliseQty(item.refundedQty + q) } : item;
     });
-
-    if (!refundItems.length) return 0;
 
     const refund: Refund = {
       id: newId('rf'),
