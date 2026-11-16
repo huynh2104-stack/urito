@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState, type CSSProperties, type MouseEvent,
 import { Button, EmptyState, SearchInput } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { monogram, tint } from '@/components/ProductThumb';
+import { useThumb } from '@/lib/thumbCache';
 import { ViewMenu } from './ViewMenu';
 import type { PosView } from './viewOptions';
 import { useMoney, useT } from '@/store/app';
@@ -57,7 +58,7 @@ export function ProductGrid({
   const sorted = [...categories].filter((c) => c.active).sort((a, b) => a.sort - b.sort);
   // Photos only earn their space when the shop has taken some; until then each
   // product is a price tag, which is what a cashier actually scans for.
-  const withImages = products.some((p) => p.image);
+  const withImages = products.some((p) => (p.imageRev ?? 0) > 0 || Boolean(p.image));
   const lang = useApp((st) => st.settings.lang);
 
   // A shop can have hundreds of products with photos. Draw them in pages as the
@@ -184,6 +185,7 @@ const ProductTile = memo(function ProductTile({
   const inCart = useCart((s) => s.qtyByProduct[p.id] ?? 0);
   const taxMode = useApp((s) => s.settings.taxMode);
   const negativeStock = useApp((st) => st.settings.negativeStock);
+  const { ref: thumbRef, src: thumbSrc } = useThumb(p.id, p.imageRev, p.image);
   const tracked = p.trackStock && !p.isService;
   // Live figure: what is on the shelf minus what this cart and parked tickets
   // have already claimed - it moves as the cashier taps.
@@ -239,9 +241,9 @@ const ProductTile = memo(function ProductTile({
       className={`prod-tile ${out ? 'out' : ''} ${inCart > 0 ? 'in-cart' : ''}`}
       onClick={(e: MouseEvent<HTMLButtonElement>) => onPick(p, e.currentTarget)}
     >
-      <span className="prod-thumb" style={p.image ? undefined : tint(p.color)}>
-        {p.image ? (
-          <img src={p.image} alt="" loading="lazy" decoding="async" />
+      <span ref={thumbRef} className="prod-thumb" style={thumbSrc ? undefined : tint(p.color)}>
+        {thumbSrc ? (
+          <img src={thumbSrc} alt="" loading="lazy" decoding="async" />
         ) : (
           <span className="prod-initial">{monogram(p.name)}</span>
         )}

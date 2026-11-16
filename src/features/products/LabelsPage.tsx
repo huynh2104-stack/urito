@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button, Checkbox, EmptyState, Field, NumberInput, SearchInput, Select } from '@/components/ui';
 import { Barcode } from '@/components/Barcode';
+import { ProductThumb } from '@/components/ProductThumb';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { generateInternalBarcode } from '@/lib/barcode';
@@ -107,9 +108,7 @@ export function LabelsPage() {
             <div style={{ maxHeight: '62vh', overflowY: 'auto' }}>
               {visible.map((p) => (
                 <div key={p.id} className="list-row">
-                  <div className="thumb-sm" style={p.image ? undefined : { background: `${p.color}1f`, color: p.color }}>
-                    {p.image ? <img src={p.image} alt="" /> : p.name.slice(0, 1)}
-                  </div>
+                  <ProductThumb productId={p.id} imageRev={p.imageRev} name={p.name} color={p.color} image={p.image} size={36} />
                   <div className="grow">
                     <div className="strong truncate">{p.name}</div>
                     <div className="tiny dim mono">{p.barcode || t('label.noBarcode')}</div>

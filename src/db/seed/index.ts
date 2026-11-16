@@ -1,6 +1,7 @@
 import { computeLine, computeTotals } from '@/core/cart';
 import { formatCode, newId } from '@/core/id';
 import { effectiveTaxRateBp } from '@/core/tax';
+import type { EncodedThumb } from '@/lib/image';
 import { db } from '../db';
 import { docPrefixes, PALETTE, defaultOwner, defaultSettings } from '../defaults';
 import { EN_CATALOG } from './en';
@@ -21,6 +22,7 @@ import type {
   OrderType,
   PayMethod,
   Product,
+  ProductImageRow,
   Settings,
   User,
 } from '../types';
@@ -46,19 +48,10 @@ export interface SeedOptions {
   loadImages?: boolean;
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-    reader.onerror = () => reject(reader.error ?? new Error('FileReader error'));
-    reader.readAsDataURL(blob);
-  });
-}
-
-/** サンプルWebP画像をトランザクション外で先読みし、取得失敗（オフライン等）時はモノグラムへフォールバックする。 */
-async function preloadSampleImages(set: MarketSeedSet, enabled: boolean): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  if (!enabled || typeof window === 'undefined' || typeof fetch !== 'function' || typeof FileReader === 'undefined') {
+/** サンプルWebP画像をトランザクション外で先読みし、C-01のバイナリ格納形式で返す（失敗時はモノグラム表示）。 */
+async function preloadSampleImages(set: MarketSeedSet, enabled: boolean): Promise<Map<string, EncodedThumb>> {
+  const map = new Map<string, EncodedThumb>();
+  if (!enabled || typeof window === 'undefined' || typeof fetch !== 'function') {
     return map;
   }
   const paths = [...new Set(set.products.map((p) => p.image).filter((v): v is string => Boolean(v)))];
@@ -68,8 +61,10 @@ async function preloadSampleImages(set: MarketSeedSet, enabled: boolean): Promis
         const res = await fetch(path);
         if (!res.ok) return;
         const blob = await res.blob();
-        const dataUrl = await blobToDataUrl(blob);
-        if (dataUrl) map.set(path, dataUrl);
+        const bytes = await blob.arrayBuffer();
+        if (bytes.byteLength > 0) {
+          map.set(path, { mime: blob.type || 'image/webp', bytes, w: 320, h: 320 });
+        }
       } catch {
         /* ネットワーク未接続時は画像なしのまま継続し、モノグラムを表示する */
       }
@@ -99,7 +94,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
 
   const loadedImages = opts.withSampleData
     ? await preloadSampleImages(set, opts.loadImages !== false)
-    : new Map<string, string>();
+    : new Map<string, EncodedThumb>();
 
   await db.transaction(
     'rw',
@@ -109,6 +104,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
       db.categories,
       db.modifierGroups,
       db.products,
+      db.productImages,
       db.areas,
       db.diningTables,
       db.customers,
@@ -145,12 +141,25 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
       if (mods.length) await db.modifierGroups.bulkPut(mods);
 
       const now = Date.now();
+      const imageRows: ProductImageRow[] = [];
       const products: Product[] = set.products.map((p, i) => {
+        const id = newId('p');
+        const loadedThumb = p.image ? loadedImages.get(p.image) : undefined;
+        if (loadedThumb) {
+          imageRows.push({
+            productId: id,
+            mime: loadedThumb.mime,
+            bytes: loadedThumb.bytes,
+            w: loadedThumb.w,
+            h: loadedThumb.h,
+            rev: 1,
+          });
+        }
         const stock = p.stock ?? 0;
         const minStock =
           p.minStock !== undefined ? p.minStock : p.stock !== undefined ? Math.max(4, Math.round(stock * 0.2)) : 0;
         return {
-          id: newId('p'),
+          id,
           sku: `${prefixes.sku}${String(i + 1).padStart(4, '0')}`,
           barcode: p.barcode ?? '',
           name: p.name,
@@ -165,7 +174,8 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
           isService: false,
           active: true,
           color: PALETTE[p.cat % PALETTE.length],
-          image: p.image ? (loadedImages.get(p.image) ?? '') : '',
+          image: '',
+          imageRev: loadedThumb ? 1 : 0,
           modifierGroupIds: (p.mods ?? []).map((mi) => mods[mi]?.id).filter((id): id is string => Boolean(id)),
           favorite: !!p.fav,
           taxCategory: p.taxCategory ?? 'standard',
@@ -175,6 +185,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
         };
       });
       await db.products.bulkPut(products);
+      if (imageRows.length) await db.productImages.bulkPut(imageRows);
 
       if (set.areas.length) {
         const areas: Area[] = set.areas.map((name, i) => ({ id: newId('a'), name, sort: i }));

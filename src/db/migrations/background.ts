@@ -1,5 +1,7 @@
 import { db, kvGet, kvSet } from '@/db/db';
 import { hashPin } from '@/core/pin';
+import { dataUrlToImageBytes } from '@/lib/image';
+import type { Product, ProductImageRow } from '@/db/types';
 
 export interface BackgroundTask {
   id: string;
@@ -26,7 +28,34 @@ export const migratePlaintextPinsTask: BackgroundTask = {
   },
 };
 
-export const BACKGROUND_TASKS: BackgroundTask[] = [migratePlaintextPinsTask];
+/** C-01: 既存の Product.image (DataURL) を20件単位のバッチで productImages テーブルへ分離移送する。 */
+export const migrateProductImagesTask: BackgroundTask = {
+  id: 'product-images-v4',
+  async run() {
+    const products = await db.products.toArray();
+    const targets = products.filter((p) => Boolean(p.image));
+    for (let i = 0; i < targets.length; i += 20) {
+      const batch = targets.slice(i, i + 20);
+      const imageRows: ProductImageRow[] = [];
+      const updatedProducts: Product[] = [];
+      for (const p of batch) {
+        const decoded = dataUrlToImageBytes(p.image);
+        if (decoded) {
+          const rev = Math.max(1, p.imageRev ?? 0);
+          imageRows.push({ productId: p.id, ...decoded, rev });
+          updatedProducts.push({ ...p, image: '', imageRev: rev });
+        }
+      }
+      if (!imageRows.length) continue;
+      await db.transaction('rw', [db.products, db.productImages], async () => {
+        await db.productImages.bulkPut(imageRows);
+        await db.products.bulkPut(updatedProducts);
+      });
+    }
+  },
+};
+
+export const BACKGROUND_TASKS: BackgroundTask[] = [migratePlaintextPinsTask, migrateProductImagesTask];
 
 /** IndexedDB 以外の非同期 API（暗号化・Canvas 変換など）を伴う移行を、
  *  DB オープン後に少量ずつ冪等に実行するランナー。 */

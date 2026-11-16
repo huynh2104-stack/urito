@@ -173,7 +173,7 @@ export function InventoryPage() {
                         <tr key={p.id}>
                           <td>
                             <div className="row gap-12">
-                              <ProductThumb name={p.name} color={p.color} image={p.image} size={38} />
+                              <ProductThumb productId={p.id} imageRev={p.imageRev} name={p.name} color={p.color} image={p.image} size={38} />
                               <div>
                                 <div className="strong">{p.name}</div>
                                 {p.sku && <div className="tiny dim">{p.sku}</div>}

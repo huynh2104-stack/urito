@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useThumb } from '@/lib/thumbCache';
 
 /** Two letters for a badge: first letters of the first two words. */
 export function monogram(name: string): string {
@@ -16,24 +17,30 @@ export function tint(color: string | undefined): CSSProperties {
 
 /** Product picture, or a tinted monogram when the shop has no photo. */
 export function ProductThumb({
+  productId,
+  imageRev,
   name,
   color,
   image,
   size = 40,
   className = '',
 }: {
+  productId?: string;
+  imageRev?: number;
   name: string;
   color?: string;
   image?: string;
   size?: number;
   className?: string;
 }) {
+  const { ref, src } = useThumb(productId, imageRev, image);
   return (
     <span
+      ref={ref}
       className={`pthumb ${className}`}
-      style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.34)), ...(image ? undefined : tint(color)) }}
+      style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.34)), ...(src ? undefined : tint(color)) }}
     >
-      {image ? <img src={image} alt="" loading="lazy" decoding="async" /> : monogram(name)}
+      {src ? <img src={src} alt="" loading="lazy" decoding="async" /> : monogram(name)}
     </span>
   );
 }

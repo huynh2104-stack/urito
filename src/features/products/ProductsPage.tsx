@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, SearchInput, Select, Tabs } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { ProductThumb } from '@/components/ProductThumb';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatAmount, formatQty } from '@/core/money';
@@ -170,9 +171,7 @@ export function ProductsPage() {
                       return (
                         <tr key={p.id} className="clickable" onClick={() => setEditing(p)}>
                           <td style={{ width: 48 }}>
-                            <div className="thumb-sm" style={p.image ? undefined : { background: `${p.color}1f`, color: p.color }}>
-                              {p.image ? <img src={p.image} alt="" loading="lazy" /> : p.name.slice(0, 1).toUpperCase()}
-                            </div>
+                            <ProductThumb productId={p.id} imageRev={p.imageRev} name={p.name} color={p.color} image={p.image} size={36} />
                           </td>
                           <td>
                             <div className="row gap-4">

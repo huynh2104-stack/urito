@@ -3,7 +3,8 @@ import Dexie from 'dexie';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { UritoDB } from '@/db/db';
+import { db, UritoDB } from '@/db/db';
+import { migrateProductImagesTask } from '@/db/migrations/background';
 import { LATEST_SCHEMA_VERSION } from '@/db/migrations';
 import { v1Migration } from '@/db/migrations/v1';
 
@@ -47,5 +48,45 @@ describe('v1 スナップショットからのスキーママイグレーショ�
 
     upgraded.close();
     await Dexie.delete(dbName);
+  });
+
+  it('C-01: インラインDataURL画像を productImages テーブルへ移行し product.image を空にする', async () => {
+    await db.open();
+    await db.products.clear();
+    await db.productImages.clear();
+    const now = Date.now();
+    await db.products.put({
+      id: 'p_img_mig',
+      sku: 'SKU-IMG',
+      barcode: '',
+      name: 'テスト画像商品',
+      categoryId: '',
+      price: 500,
+      cost: 200,
+      unit: '',
+      trackStock: false,
+      stock: 0,
+      minStock: 0,
+      isService: false,
+      active: true,
+      color: '#111111',
+      image: 'data:image/webp;base64,SGVsbG8=',
+      modifierGroupIds: [],
+      favorite: false,
+      sort: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await migrateProductImagesTask.run();
+
+    const migratedProduct = await db.products.get('p_img_mig');
+    expect(migratedProduct?.image).toBe('');
+    expect(migratedProduct?.imageRev).toBe(1);
+
+    const imgRow = await db.productImages.get('p_img_mig');
+    expect(imgRow?.mime).toBe('image/webp');
+    expect(imgRow?.rev).toBe(1);
+    expect(new TextDecoder().decode(imgRow?.bytes)).toBe('Hello');
   });
 });

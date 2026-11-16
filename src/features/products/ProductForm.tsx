@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   Checkbox,
@@ -17,7 +17,8 @@ import { docPrefixes, PALETTE } from '@/db/defaults';
 import { useApp, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import { applyStockChanges } from '@/services/inventory';
-import { squareThumb } from '@/lib/image';
+import { encodeProductThumb, type EncodedThumb } from '@/lib/image';
+import { invalidateProductThumb, useThumb } from '@/lib/thumbCache';
 import { generateInternalBarcode } from '@/lib/barcode';
 import { Icon } from '@/components/Icon';
 import { CameraScanner } from '@/components/CameraScanner';
@@ -40,6 +41,7 @@ const blank = (): Product => ({
   active: true,
   color: PALETTE[0],
   image: '',
+  imageRev: 0,
   modifierGroupIds: [],
   favorite: false,
   taxCategory: 'standard',
@@ -66,13 +68,33 @@ export function ProductForm({
   const [draft, setDraft] = useState<Product>(() => product ?? blank());
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [pendingThumb, setPendingThumb] = useState<EncodedThumb | null>(null);
+  const [removeThumb, setRemoveThumb] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const { src: savedThumb } = useThumb(draft.id, draft.imageRev, draft.image);
+
+  useEffect(() => {
+    if (!pendingThumb) {
+      queueMicrotask(() => setPreviewUrl(''));
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([pendingThumb.bytes], { type: pendingThumb.mime }));
+    queueMicrotask(() => setPreviewUrl(url));
+    return () => URL.revokeObjectURL(url);
+  }, [pendingThumb]);
+
+  const activePreview = removeThumb ? '' : previewUrl || savedThumb || '';
 
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
   const pickImage = async (file: File) => {
     try {
-      set('image', await squareThumb(file, 320));
+      // C-01: Canvas 圧縮は DB トランザクション外で先に完了させる
+      const encoded = await encodeProductThumb(file, 320);
+      setPendingThumb(encoded);
+      setRemoveThumb(false);
+      set('image', '');
     } catch {
       toast.error(t('common.error'));
     }
@@ -94,12 +116,19 @@ export function ProductForm({
     if (!draft.name.trim()) return;
     setBusy(true);
     try {
+      const nextRev = removeThumb
+        ? 0
+        : pendingThumb
+          ? (draft.imageRev ?? 0) + 1
+          : (draft.imageRev ?? 0);
       const next: Product = {
         ...draft,
         name: draft.name.trim(),
         kana: draft.kana?.trim() || '',
         sku: draft.sku.trim(),
         barcode: draft.barcode.trim(),
+        image: removeThumb || pendingThumb ? '' : draft.image,
+        imageRev: nextRev,
         updatedAt: Date.now(),
       };
       if (next.barcode) {
@@ -110,11 +139,23 @@ export function ProductForm({
         }
       }
       const before = product && product.id === next.id ? product.stock : 0;
-      await db.products.put(next);
+      await db.transaction('rw', [db.products, db.productImages, db.stockMovements], async () => {
+        await db.products.put(next);
+        if (removeThumb) {
+          await db.productImages.delete(next.id);
+        } else if (pendingThumb) {
+          await db.productImages.put({
+            productId: next.id,
+            mime: pendingThumb.mime,
+            bytes: pendingThumb.bytes,
+            w: pendingThumb.w,
+            h: pendingThumb.h,
+            rev: nextRev,
+          });
+        }
 
-      // A stock figure typed straight into the form still belongs in the ledger.
-      if (next.trackStock && !next.isService && next.stock !== before) {
-        await db.transaction('rw', [db.products, db.stockMovements], async () => {
+        // フォーム上で直接入力された在庫増減も在庫移動台帳に記録する
+        if (next.trackStock && !next.isService && next.stock !== before) {
           await db.products.update(next.id, { stock: before });
           await applyStockChanges(
             [
@@ -129,12 +170,21 @@ export function ProductForm({
             ],
             user,
           );
-        });
+        }
+      });
+
+      if (removeThumb || pendingThumb) {
+        invalidateProductThumb(next.id);
       }
 
       toast.success(t('common.saved'));
-      if (addAnother) setDraft({ ...blank(), categoryId: next.categoryId, color: next.color });
-      else onClose();
+      if (addAnother) {
+        setDraft({ ...blank(), categoryId: next.categoryId, color: next.color });
+        setPendingThumb(null);
+        setRemoveThumb(false);
+      } else {
+        onClose();
+      }
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -153,7 +203,9 @@ export function ProductForm({
           {!isNew && (
             <Button
               icon="copy"
-              onClick={() =>
+              onClick={() => {
+                setPendingThumb(null);
+                setRemoveThumb(false);
                 setDraft({
                   ...draft,
                   id: newId('p'),
@@ -161,9 +213,11 @@ export function ProductForm({
                   sku: '',
                   barcode: '',
                   stock: 0,
+                  image: '',
+                  imageRev: 0,
                   createdAt: Date.now(),
-                })
-              }
+                });
+              }}
             >
               <span className="hide-sm">{t('common.duplicate')}</span>
             </Button>
@@ -184,8 +238,8 @@ export function ProductForm({
       <div className="col gap-16">
         <div className="product-form-head">
           <label className="image-drop" title={t('products.image')}>
-            {draft.image ? (
-              <img src={draft.image} alt="" />
+            {activePreview ? (
+              <img src={activePreview} alt="" />
             ) : (
               <span className="image-drop-empty">
                 <Icon name="image" size={26} />
@@ -226,9 +280,18 @@ export function ProductForm({
 
           </div>
         </div>
-        {draft.image && (
+        {activePreview && (
           <div className="row gap-8" style={{ marginTop: -8 }}>
-            <Button size="sm" variant="ghost" icon="trash" onClick={() => set('image', '')}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="trash"
+              onClick={() => {
+                setPendingThumb(null);
+                setRemoveThumb(true);
+                set('image', '');
+              }}
+            >
               {t('products.removeImage')}
             </Button>
           </div>

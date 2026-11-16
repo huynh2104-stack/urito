@@ -134,9 +134,20 @@ export interface Product {
   modifierGroupIds: ID[];
   favorite: boolean;
   taxCategory?: TaxCategory;
+  imageRev?: number;
   sort: number;
   createdAt: number;
   updatedAt: number;
+}
+
+/** C-01: 商品レコードから分離したサムネイル画像テーブルの1行。 */
+export interface ProductImageRow {
+  productId: ID;
+  mime: string;
+  bytes: ArrayBuffer;
+  w: number;
+  h: number;
+  rev: number;
 }
 
 /* ------------------------------------------------------------------ parties */

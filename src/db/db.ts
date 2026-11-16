@@ -12,6 +12,7 @@ import type {
   ModifierGroup,
   Order,
   Product,
+  ProductImageRow,
   Promotion,
   Purchase,
   Settings,
@@ -28,6 +29,7 @@ export class UritoDB extends Dexie {
   categories!: Table<Category, string>;
   modifierGroups!: Table<ModifierGroup, string>;
   products!: Table<Product, string>;
+  productImages!: Table<ProductImageRow, string>;
   customers!: Table<Customer, string>;
   suppliers!: Table<Supplier, string>;
   areas!: Table<Area, string>;

@@ -148,7 +148,7 @@ export function CartLine({
           onPointerCancel={up}
         >
           <div className="cart-line-top">
-            <ProductThumb name={item.name} color={product?.color} image={product?.image} size={40} />
+            <ProductThumb productId={product?.id} imageRev={product?.imageRev} name={item.name} color={product?.color} image={product?.image} size={40} />
             <button type="button" className="cart-line-name" onClick={() => onEdit(item.id)}>
               {item.name}
               {item.modifiers.length > 0 && (
