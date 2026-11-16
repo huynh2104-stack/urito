@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Urito POS — 小規模店舗向け・完全オフライン対応POSシステム</title>
+    <meta
+      name="description"
+      content="サーバー不要・アカウント不要・月額0円で使える小規模店舗・カフェ・飲食店向けPWA型POSシステム。IndexedDBローカル保存、軽減税率8%/10%・インボイス・領収書発行、Shopify CSV連携に対応。"
+    />
+    <meta property="og:title" content="Urito POS — 完全オフライン対応・ブラウザだけで動く店舗POS" />
+    <meta
+      property="og:description"
+      content="通信環境が不安定でも止まらないIndexedDBベースのレジ・在庫・売上分析アプリ。今すぐブラウザで業態別デモを体験できます。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./samples/ja/lp-01-shop-counter.webp" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link visually-hidden">本文へスキップ</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./">
+          <img src="./icons/icon-192.svg" alt="" width="28" height="28" />
+          <span>Urito POS</span>
+        </a>
+        <nav class="site-nav" aria-label="メインナビゲーション">
+          <ul class="nav-links">
+            <li><a href="./" aria-current="page">日本語</a></li>
+            <li><a href="./en/">English</a></li>
+            <li><a href="./vi/">Tiếng Việt</a></li>
+          </ul>
+          <a class="btn btn-primary" href="./app/">POSを開く</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <span class="eyebrow">MIT License · サーバー・月額料金 0円</span>
+            <h1 id="main-content" tabindex="-1">ブラウザだけで動く、小規模店舗のための軽量オフラインPOS</h1>
+            <p class="lead">
+              商品・売上・在庫・顧客データはすべて端末内の IndexedDB に保存。
+              専用機器やクラウド契約なしで、会計・軽減税率レシート・在庫棚卸・EC連携まで1つのPWAで完結します。
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="./app/?demo=ja-retail">小売店デモを試す</a>
+              <a class="btn" href="./app/?demo=ja-cafe">カフェデモ</a>
+              <a class="btn" href="./app/?demo=ja-restaurant">飲食店デモ</a>
+            </div>
+            <div class="metrics-bar" aria-label="設計仕様サマリー">
+              <div class="metric">
+                <div class="metric-value">0円</div>
+                <div class="metric-label">サーバー・月額運用費</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">Offline</div>
+                <div class="metric-label">Service Worker 常時動作</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">8% / 10%</div>
+                <div class="metric-label">適格簡易請求書・領収書</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">Shopify CSV</div>
+                <div class="metric-label">商品・受注取込と共通在庫</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-media">
+            <img
+              src="./samples/ja/lp-01-shop-counter.webp"
+              alt="タブレットPOSとサーマルプリンターが設置された小売店レジカウンターのイメージ"
+              width="1200"
+              height="675"
+              fetchpriority="high"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt">
+        <div class="container">
+          <h2 class="section-title">業態別の即試用デモ（ブラウザ内完結）</h2>
+          <p class="section-sub">
+            デモ起動時に過去30日分の取引・在庫データをブラウザ内に自動生成し、既存データを汚さず全画面を操作できます。
+          </p>
+          <div class="grid-3">
+            <article class="card">
+              <img
+                src="./samples/ja/lp-01-shop-counter.webp"
+                alt="小売店向けの店頭レジ運用イメージ"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>小売店（うりと商店）</h3>
+                <p>バーコード／JAN読取、数量×コード入力、軽減税率8%/10%混在レシート、在庫・仕入・ラベル印刷まで対応。</p>
+                <a class="btn btn-primary" href="./app/?demo=ja-retail">小売デモを起動</a>
+              </div>
+            </article>
+            <article class="card">
+              <img
+                src="./samples/ja/lp-02-cafe-counter.webp"
+                alt="カフェカウンターでモバイル端末とレジを組み合わせた運用イメージ"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>カフェ（喫茶うりと）</h3>
+                <p>サイズ・氷・甘さ等のオプション加算、店内飲食（10%）とテイクアウト（8%）のイートイン税率切替に対応。</p>
+                <a class="btn btn-primary" href="./app/?demo=ja-cafe">カフェデモを起動</a>
+              </div>
+            </article>
+            <article class="card">
+              <img
+                src="./samples/ja/lp-03-phone-in-shop.webp"
+                alt="スマートフォンのモバイルPOSで店舗在庫や会計を操作するイメージ"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>飲食店（うりと食堂）</h3>
+                <p>テーブル管理、注文の一時保留・追加注文、シフト精算、日別・時間帯別の売上と粗利集計に対応。</p>
+                <a class="btn btn-primary" href="./app/?demo=ja-restaurant">飲食店デモを起動</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <h2 class="section-title">店舗運用に即した堅牢な設計（Store Operation）</h2>
+          <p class="section-sub">
+            実店舗の会計・棚卸・バックアップ運用で求められるデータ保全と作業効率を標準機能として組み込んでいます。
+          </p>
+          <ul class="facts-list">
+            <li class="fact-box">
+              <h3>完全ローカル永続化と自動退避</h3>
+              <p>取引や在庫変動はトランザクションで一括更新。スキーマ更新前のOPFS自動退避やGzip圧縮バックアップ（.json.gz）に対応しています。</p>
+            </li>
+            <li class="fact-box">
+              <h3>日本のインボイス・領収書印字</h3>
+              <p>登録番号（T+13桁）の形式検証、軽減税率 ※ 注記、税率別内訳表示、5万円以上の印紙枠付き領収書印刷に対応します。</p>
+            </li>
+            <li class="fact-box">
+              <h3>権限管理とPINロックアウト</h3>
+              <p>スタッフPINはPBKDF2-SHA256でソルト付きハッシュ化し、5回連続誤入力時のロックアウト制御で誤操作・不正を防ぎます。</p>
+            </li>
+            <li class="fact-box">
+              <h3>Shopify CSV・EC受注取込</h3>
+              <p>Shopify形式の商品CSV入出力に加え、EC受注CSVからの重複防止付き取込・自動在庫引当・チャネル別集計を実行できます。</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>Urito POS · MIT License · IndexedDB Local-First Progressive Web App</p>
+      </div>
+    </footer>
+  </body>
+</html>

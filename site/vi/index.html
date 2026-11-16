@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Urito POS — Phần mềm bán hàng offline chạy ngay trên trình duyệt</title>
+    <meta
+      name="description"
+      content="Phần mềm POS PWA cho cửa hàng bán lẻ, quán cà phê, quán ăn. Lưu dữ liệu hoàn toàn trên máy bằng IndexedDB — không server, không phí hàng tháng, đồng bộ CSV Shopify và in hoá đơn đa ngôn ngữ."
+    />
+    <meta property="og:title" content="Urito POS — Phần mềm bán hàng offline cho cửa hàng nhỏ" />
+    <meta
+      property="og:description"
+      content="Chạy mượt ngay cả khi mất mạng. Dùng thử ngay bản demo 30 ngày dữ liệu bán hàng trên trình duyệt."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="../samples/ja/lp-01-shop-counter.webp" />
+    <link rel="icon" type="image/svg+xml" href="../icons/icon-192.svg" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link visually-hidden">Chuyển đến nội dung chính</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./">
+          <img src="../icons/icon-192.svg" alt="" width="28" height="28" />
+          <span>Urito POS</span>
+        </a>
+        <nav class="site-nav" aria-label="Điều hướng chính">
+          <ul class="nav-links">
+            <li><a href="../">日本語</a></li>
+            <li><a href="../en/">English</a></li>
+            <li><a href="./" aria-current="page">Tiếng Việt</a></li>
+          </ul>
+          <a class="btn btn-primary" href="../app/">Mở ứng dụng POS</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <span class="eyebrow">MIT License · 0 đồng phí duy trì</span>
+            <h1 id="main-content" tabindex="-1">Phần mềm bán hàng chạy trên trình duyệt, sẵn sàng ngay khi mất mạng</h1>
+            <p class="lead">
+              Toàn bộ hàng hoá, hoá đơn, tồn kho và khách hàng được lưu trực tiếp trong IndexedDB của máy bạn.
+              Tính tiền tách phương thức, quản lý kho, xuất hoá đơn và nhập đơn EC CSV không cần thuê máy chủ.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="../app/?demo=ja-retail">Thử Demo Bán lẻ</a>
+              <a class="btn" href="../app/?demo=ja-cafe">Demo Cà phê</a>
+              <a class="btn" href="../app/?demo=ja-restaurant">Demo Quán ăn</a>
+            </div>
+            <div class="metrics-bar" aria-label="Thông số nổi bật">
+              <div class="metric">
+                <div class="metric-value">0 đ / tháng</div>
+                <div class="metric-label">Không server, không tài khoản</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">Offline</div>
+                <div class="metric-label">Lưu trữ IndexedDB &amp; SW</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">.json.gz</div>
+                <div class="metric-label">Sao lưu nén vào thư mục máy</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">Shopify CSV</div>
+                <div class="metric-label">Xuất nhập hàng hoá &amp; đơn EC</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-media">
+            <img
+              src="../samples/ja/lp-01-shop-counter.webp"
+              alt="Quầy thu ngân cửa hàng bán lẻ với máy tính bảng và máy in hoá đơn"
+              width="1200"
+              height="675"
+              fetchpriority="high"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt">
+        <div class="container">
+          <h2 class="section-title">Trải nghiệm ngay theo từng mô hình cửa hàng</h2>
+          <p class="section-sub">
+            Chế độ demo tạo sẵn dữ liệu 30 ngày trong cơ sở dữ liệu riêng trên trình duyệt, không ảnh hưởng tới dữ liệu thật của bạn.
+          </p>
+          <div class="grid-3">
+            <article class="card">
+              <img
+                src="../samples/ja/lp-01-shop-counter.webp"
+                alt="Mô hình cửa hàng bán lẻ tạp hoá"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>Cửa hàng bán lẻ</h3>
+                <p>Tìm kiếm nhanh, quét mã vạch bằng camera, nhập kho nhà cung cấp, cảnh báo sắp hết hàng và in tem mã vạch.</p>
+                <a class="btn btn-primary" href="../app/?demo=ja-retail">Mở Demo Bán lẻ</a>
+              </div>
+            </article>
+            <article class="card">
+              <img
+                src="../samples/ja/lp-02-cafe-counter.webp"
+                alt="Quầy pha chế cà phê dùng POS"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>Quán cà phê &amp; trà sữa</h3>
+                <p>Tuỳ chọn size, topping linh hoạt cùng quy tắc thuế tại quán / mang về và lưu đơn chờ thanh toán.</p>
+                <a class="btn btn-primary" href="../app/?demo=ja-cafe">Mở Demo Cà phê</a>
+              </div>
+            </article>
+            <article class="card">
+              <img
+                src="../samples/ja/lp-03-phone-in-shop.webp"
+                alt="Nhân viên kiểm tra kho hàng trên điện thoại"
+                width="600"
+                height="338"
+                loading="lazy"
+              />
+              <div class="card-body">
+                <h3>Quán ăn &amp; nhà hàng</h3>
+                <p>Sơ đồ bàn theo khu vực, kết ca thu ngân đối soát tiền mặt, báo cáo lãi ròng và gộp dữ liệu nhiều máy.</p>
+                <a class="btn btn-primary" href="../app/?demo=ja-restaurant">Mở Demo Quán ăn</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <h2 class="section-title">Thiết kế cho vận hành cửa hàng thực tế</h2>
+          <p class="section-sub">
+            Đảm bảo tính chính xác kế toán bằng số nguyên, bảo mật mã PIN và khả năng khôi phục dữ liệu độc lập.
+          </p>
+          <ul class="facts-list">
+            <li class="fact-box">
+              <h3>Giao dịch nguyên tử &amp; sao lưu nén Gzip</h3>
+              <p>Mọi thao tác bán, huỷ, hoàn tiền ghi đồng bộ trong một transaction và hỗ trợ sao lưu định dạng .json.gz gọn nhẹ.</p>
+            </li>
+            <li class="fact-box">
+              <h3>Đa ngôn ngữ &amp; đổi ngôn ngữ trên hoá đơn</h3>
+              <p>Lưu tên hàng đa ngôn ngữ cho sản phẩm và chọn nhanh tiếng Nhật / Anh / Việt ngay khi in hoá đơn cho khách.</p>
+            </li>
+            <li class="fact-box">
+              <h3>Bảo mật mã PIN PBKDF2-SHA256</h3>
+              <p>Mã PIN nhân viên được băm với salt ngẫu nhiên và tự động khoá tạm thời khi nhập sai quá 5 lần.</p>
+            </li>
+            <li class="fact-box">
+              <h3>Kết nối Shopify CSV &amp; đơn hàng EC</h3>
+              <p>Nhập/xuất CSV sản phẩm Shopify, đồng bộ đơn từ kênh online chống trùng lặp và thống kê doanh thu từng kênh.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>Urito POS · MIT License · IndexedDB Local-First Progressive Web App</p>
+      </div>
+    </footer>
+  </body>
+</html>
