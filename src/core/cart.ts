@@ -2,9 +2,7 @@ import type { DiscountType, OrderItem, OrderType, TaxLine, TaxMode, TaxRounding 
 import { percentOf, roundToStep, normaliseQty } from './money';
 import { computeTaxLines } from './tax';
 
-/* The whole pricing engine lives here as pure functions so it can be unit
- * tested without a browser, a database or React. Every screen that shows a
- * price calls into this file - there is exactly one source of truth. */
+/* 価格・割引・税額計算の純粋関数エンジン。画面・DB・React から独立させ単体テスト可能にし、計算根拠を単一化する。 */
 
 export interface LineInput {
   price: number;
@@ -23,7 +21,7 @@ export interface LineTotals {
   cost: number;
 }
 
-/** Unit price including the picked modifiers (size L, extra shot, ...). */
+/** 選択したオプション（Lサイズ・追加ショット等）を含めた単価を返す。 */
 export function unitPriceOf(line: Pick<LineInput, 'price' | 'modifiers'>): number {
   return line.modifiers.reduce((sum, m) => sum + m.priceDelta, line.price);
 }
@@ -130,13 +128,13 @@ export function computeTotals(input: TotalsInput): Totals {
   };
 }
 
-/** Points earned by an order, e.g. 1 point per 10.000 d spent. */
+/** 支払い額に応じて付与されるポイント数を返す（例: 10,000円ごと1pt）。 */
 export function pointsEarnedFor(total: number, earnPer: number): number {
   if (!earnPer || earnPer <= 0) return 0;
   return Math.floor(total / earnPer);
 }
 
-/** Change to hand back once the customer has paid. */
+/** 預り金から合計を差し引いたお釣りを返す。 */
 export function changeFor(total: number, paid: number): number {
   return Math.max(0, paid - total);
 }
@@ -145,7 +143,7 @@ export function dueFor(total: number, paid: number): number {
   return Math.max(0, total - paid);
 }
 
-/** Two cart lines merge when they are the same product with the same options. */
+/** 同一商品・同一オプション・同一メモの明細を統合するための識別キーを生成する。 */
 export function lineKey(
   productId: string,
   modifiers: { id: string }[],

@@ -1,6 +1,4 @@
-/* Minimal .xlsx reader: an xlsx file is a zip of XML parts, so a small zip
- * reader + DOMParser is enough - no 300 KB spreadsheet library for the shop PC.
- * Reads the first worksheet as rows of strings. */
+/* 外部ライブラリ不要の軽量 .xlsx リーダー（ZIP展開と DOMParser で先頭シートを文字列配列へ読み込む）。 */
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
@@ -58,7 +56,7 @@ const colIndex = (ref: string): number => {
   return n - 1;
 };
 
-/** First worksheet -> rows of cell text (numbers keep their plain digits). */
+/** 先頭ワークシートを読み取り、各セルを文字列行の2次元配列として返す。 */
 export async function readXlsx(file: File): Promise<string[][]> {
   const buf = new Uint8Array(await file.arrayBuffer());
   const zip = readZipDirectory(buf);

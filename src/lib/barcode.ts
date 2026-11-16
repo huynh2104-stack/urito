@@ -1,8 +1,7 @@
-/* Code 128 encoder, written in-house so label printing needs no extra library.
- * Scanners sold in VN and JP all read Code 128, and code set C packs digit-only
- * codes (the common case for shop barcodes) into half the width. */
+/* 外部ライブラリ不要の内製 Code 128 エンコーダ。
+ * 市販バーコードスキャナで標準読取でき、小売商品コードの多くを占める数字列には Code Set C を用いて幅を半分に圧縮する。 */
 
-/** Bar/space widths for symbol values 0..106 (106 = stop, which has 7 modules). */
+/** シンボル値 0..106 のバー/スペース幅定義（106 はストップ文字で 7 モジュール）。 */
 export const CODE128_PATTERNS = [
   '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
   '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
@@ -21,7 +20,7 @@ const START_B = 104;
 const START_C = 105;
 const STOP = 106;
 
-/** Symbol values for `text`, including start, checksum and stop. */
+/** 文字列をスタート・チェックサム・ストップ含む Code 128 シンボル値配列へ符号化する。 */
 export function encodeCode128(text: string): number[] {
   const useC = /^\d+$/.test(text) && text.length >= 4 && text.length % 2 === 0;
   const values: number[] = [useC ? START_C : START_B];
@@ -30,7 +29,7 @@ export function encodeCode128(text: string): number[] {
   } else {
     for (const ch of text) {
       const code = ch.charCodeAt(0);
-      // Code set B covers printable ASCII; anything else becomes '?'.
+      // Code Set B は印字可能 ASCII 文字を扱い、対象外文字は '?' として代替する
       values.push(code >= 32 && code <= 126 ? code - 32 : 31);
     }
   }
@@ -39,7 +38,7 @@ export function encodeCode128(text: string): number[] {
   return values;
 }
 
-/** Bars as [x, width] pairs in module units, plus the total width. */
+/** 各バーの [x位置, 幅] 配列（モジュール単位）と総幅を返す。 */
 export function code128Bars(text: string): { bars: [number, number][]; width: number } {
   const bars: [number, number][] = [];
   let x = 0;
@@ -54,15 +53,14 @@ export function code128Bars(text: string): { bars: [number, number][]; width: nu
   return { bars, width: x };
 }
 
-/** EAN-13 check digit for the first 12 digits. */
+/** 先頭 12 桁に対する EAN-13 チェックデジットを算出する。 */
 export function ean13CheckDigit(first12: string): number {
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += Number(first12[i]) * (i % 2 === 0 ? 1 : 3);
   return (10 - (sum % 10)) % 10;
 }
 
-/** In-store barcode: prefix 20-29 is reserved by GS1 for internal use, so it
- *  can never collide with a manufacturer's real barcode on packaged goods. */
+/** インストアバーコードを生成する（GS1 規格で店舗内専用に予約された 20〜29 番台を使用）。 */
 export function generateInternalBarcode(existing: Set<string>): string {
   for (let attempt = 0; attempt < 50; attempt++) {
     let body = '20';

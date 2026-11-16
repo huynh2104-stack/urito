@@ -24,3 +24,5 @@
 | `shopify-csv` | Shopify連携CSV出力 | 安定版 (stable) | v0.6 | `/products` | Shopify公式商品CSV形式での商品データの双方向インポート・エクスポートに対応します。 |
 | `multilang-catalog` | 商品カタログ多言語・多通貨 | 安定版 (stable) | v0.6 | `/products` | 1商品ごとの多言語名・説明・通貨別価格の登録とレシート印字言語の切替に対応します。 |
 | `ec-orders` | EC受注取込・共通在庫 | 安定版 (stable) | v0.6 | `/orders` | Shopify等の受注CSVを重複防止付きで取り込み、在庫引当と売上集計へ自動反映します。 |
+| `other-ec-csv` | Shopline・Shopee CSV連携 | 計画中 (planned) | v0.7 | — | Shopline・Shopeeなど他社ECモールの受注・商品CSVフォーマット対応を予定しています。 |
+| `romaji-search` | ローマ字商品検索 | 計画中 (planned) | v0.7 | — | ひらがな・カタカナに加えてローマ字入力での商品インクリメンタル検索を予定しています。 |

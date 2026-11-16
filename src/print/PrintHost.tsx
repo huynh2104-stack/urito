@@ -14,9 +14,8 @@ const usePrintStore = create<PrintState>()((set) => ({
   clear: () => set({ node: null }),
 }));
 
-/** Renders the receipt into a hidden `#print-root` and calls the browser's own
- *  print dialog. No popup window, so nothing is blocked, and the user can pick
- *  "Save as PDF" when there is no thermal printer attached. */
+/** 非表示の `#print-root` にレシート DOM を展開し、ブラウザ標準の印刷ダイアログを呼び出す。
+ *  ポップアップブロックを回避し、プリンタ未接続時は PDF 保存も選択できる。 */
 export function printDocument(node: ReactNode): void {
   usePrintStore.getState().show(node);
 }
@@ -29,7 +28,7 @@ export function PrintHost() {
     if (!node) return;
     const done = () => clear();
     window.addEventListener('afterprint', done);
-    // Two frames so the browser has laid the receipt out before printing.
+    // レイアウト確定まで2フレーム待機してから印刷ダイアログを開く
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
     const safety = window.setTimeout(done, 60_000);
     return () => {

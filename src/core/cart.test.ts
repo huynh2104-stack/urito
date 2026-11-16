@@ -31,118 +31,118 @@ const totals = (over: Partial<Parameters<typeof computeTotals>[0]> = {}) =>
     ...over,
   });
 
-describe('computeLine', () => {
-  it('multiplies price by quantity', () => {
+describe('computeLine 明細計算', () => {
+  it('単価と数量を掛け合わせて小計を求める', () => {
     expect(line().gross).toBe(60_000);
     expect(line().total).toBe(60_000);
   });
 
-  it('adds modifier prices to the unit price', () => {
+  it('オプション価格を単価に加算する', () => {
     const withMods = line({ modifiers: [{ priceDelta: 5_000 }, { priceDelta: 8_000 }] });
     expect(withMods.gross).toBe((30_000 + 13_000) * 2);
   });
 
-  it('applies a percentage discount to the whole line', () => {
+  it('明細全体に割引率を適用する', () => {
     expect(line({ discountType: 'percent', discountValue: 10 }).discount).toBe(6_000);
     expect(line({ discountType: 'percent', discountValue: 10 }).total).toBe(54_000);
   });
 
-  it('never discounts more than the line is worth', () => {
+  it('明細金額を上回る割引は行わない', () => {
     expect(line({ discountType: 'amount', discountValue: 999_999 }).total).toBe(0);
     expect(line({ discountType: 'percent', discountValue: 500 }).total).toBe(0);
   });
 
-  it('handles fractional quantities for goods sold by weight', () => {
+  it('量り売りなどの小数数量を正しく計算する', () => {
     expect(line({ price: 165_000, qty: 0.35, cost: 0 }).gross).toBe(57_750);
   });
 
-  it('rounds cost by quantity so COGS stays an integer', () => {
+  it('原価を数量倍して整数へ丸める', () => {
     expect(line({ qty: 0.333, cost: 10_000 }).cost).toBe(3_330);
   });
 
-  it('exposes the unit price including modifiers', () => {
+  it('オプション込みの単価を取得できる', () => {
     expect(unitPriceOf({ price: 25_000, modifiers: [{ priceDelta: 10_000 }] })).toBe(35_000);
   });
 });
 
-describe('computeTotals', () => {
-  it('sums the lines', () => {
+describe('computeTotals 伝票合計計算', () => {
+  it('明細の合計金額を集計する', () => {
     const result = totals({ items: [item(60_000), item(40_000)] });
     expect(result.subtotal).toBe(100_000);
     expect(result.total).toBe(100_000);
   });
 
-  it('applies an order-level percentage discount', () => {
+  it('伝票全体のパーセント割引を適用する', () => {
     const result = totals({ discountType: 'percent', discountValue: 15 });
     expect(result.discount).toBe(15_000);
     expect(result.total).toBe(85_000);
   });
 
-  it('caps an order-level amount discount at the subtotal', () => {
+  it('伝票全体の定額割引を小計までに制限する', () => {
     expect(totals({ discountType: 'amount', discountValue: 500_000 }).total).toBe(0);
   });
 
-  it('adds VAT on top in exclusive mode', () => {
+  it('外税モードでは税額を上乗せする', () => {
     const result = totals({ taxMode: 'exclusive', taxRate: 10 });
     expect(result.tax).toBe(10_000);
     expect(result.total).toBe(110_000);
   });
 
-  it('extracts VAT from the price in inclusive mode without changing the total', () => {
+  it('内税モードでは合計を変えずに内消費税を逆算する', () => {
     const result = totals({ taxMode: 'inclusive', taxRate: 10 });
     expect(result.total).toBe(100_000);
     expect(result.tax).toBe(9_091);
   });
 
-  it('charges service before tax', () => {
+  it('サービス料を加算した上で課税計算を行う', () => {
     const result = totals({ serviceChargeRate: 5, taxMode: 'exclusive', taxRate: 10 });
     expect(result.serviceCharge).toBe(5_000);
     expect(result.tax).toBe(10_500);
     expect(result.total).toBe(115_500);
   });
 
-  it('rounds the grand total to the configured step', () => {
+  it('請求合計を指定の端数単位へ丸める', () => {
     const result = totals({ items: [item(101_400)], roundTo: 1_000 });
     expect(result.total).toBe(101_000);
     expect(result.rounding).toBe(-400);
   });
 
-  it('redeems loyalty points before rounding', () => {
+  it('端数丸め前にポイント充当を差し引く', () => {
     const result = totals({ pointsUsed: 50, pointsValue: 100 });
     expect(result.pointsRedeemed).toBe(5_000);
     expect(result.total).toBe(95_000);
   });
 
-  it('never lets points redemption push the total below zero', () => {
+  it('ポイント充当で合計が負数にならないようにする', () => {
     const result = totals({ pointsUsed: 99_999, pointsValue: 100 });
     expect(result.total).toBe(0);
   });
 
-  it('reports profit net of tax and cost of goods', () => {
+  it('税額と売上原価を差し引いた粗利を算出する', () => {
     const result = totals({ taxMode: 'exclusive', taxRate: 10 });
     expect(result.cogs).toBe(40_000);
     expect(result.profit).toBe(110_000 - 10_000 - 40_000);
   });
 
-  it('counts units across lines, including fractional ones', () => {
+  it('小数数量を含む全明細の合計点数を集計する', () => {
     const result = totals({ items: [item(1, 0, 0.5), item(1, 0, 2)] });
     expect(result.unitCount).toBe(2.5);
     expect(result.itemCount).toBe(2);
   });
 });
 
-describe('helpers', () => {
-  it('gives change only when the customer overpays', () => {
+describe('カート計算補助関数', () => {
+  it('預り金が請求額を上回るときのみお釣りを返す', () => {
     expect(changeFor(100_000, 200_000)).toBe(100_000);
     expect(changeFor(100_000, 50_000)).toBe(0);
   });
 
-  it('earns one point per full spending step', () => {
+  it('付与単位を満たした分だけポイントを計算する', () => {
     expect(pointsEarnedFor(125_000, 10_000)).toBe(12);
     expect(pointsEarnedFor(125_000, 0)).toBe(0);
   });
 
-  it('treats identical products with the same options as one cart line', () => {
+  it('同一商品・同一オプションは順序に関係なく同一明細キーとみなす', () => {
     const a = lineKey('p1', [{ id: 'm1' }, { id: 'm2' }], '', 'none', 0);
     const b = lineKey('p1', [{ id: 'm2' }, { id: 'm1' }], '', 'none', 0);
     const c = lineKey('p1', [{ id: 'm1' }], '', 'none', 0);
@@ -150,7 +150,7 @@ describe('helpers', () => {
     expect(a).not.toBe(c);
   });
 
-  it('keeps lines separate when the notes differ', () => {
+  it('メモが異なる場合は別明細キーとして分ける', () => {
     expect(lineKey('p1', [], 'no ice', 'none', 0)).not.toBe(lineKey('p1', [], '', 'none', 0));
   });
 });

@@ -3,38 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Urito POS — Offline-First Browser Point of Sale for Small Shops</title>
+    <title>Urito POS — Offline-First Browser POS · Zero Monthly Fee</title>
     <meta
       name="description"
-      content="Zero-server, zero-subscription offline PWA point of sale stored locally in IndexedDB. Multi-rate tax receipts, barcode scanning, inventory tracking, gzip backups, and Shopify CSV sync."
-    />
-    <meta property="og:title" content="Urito POS — Offline-First Point of Sale" />
-    <meta
-      property="og:description"
-      content="Browser-based POS with IndexedDB local persistence, 30-day sample demos, multi-currency catalog, and EC CSV sync."
+      content="Open-source offline-first PWA point of sale for small shops, cafes, and restaurants. Japan reduced tax / invoice compliance, Shopify CSV sync, and 100k-order IndexedDB rollups."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="../samples/ja/lp-01-shop-counter.webp" />
-    <link rel="icon" type="image/svg+xml" href="../icons/icon-192.svg" />
+    <meta property="og:title" content="Urito POS — Sell Simply. Keep Clear Books." />
+    <meta
+      property="og:description"
+      content="Zero-server, offline-ready browser POS built with IndexedDB, Service Worker, and Japan Invoice receipt compliance."
+    />
+    <meta property="og:image" content="../ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../icons/icon-192.png" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
-  <body>
-    <a href="#main-content" class="skip-link visually-hidden">Skip to content</a>
-
+  <body id="top">
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="./">
-          <img src="../icons/icon-192.svg" alt="" width="28" height="28" />
+        <a class="brand" href="#top">
+          <img src="../icons/icon.svg" width="32" height="32" alt="Urito" />
           <span>Urito POS</span>
         </a>
-        <nav class="site-nav" aria-label="Primary navigation">
-          <ul class="nav-links">
-            <li><a href="../">日本語</a></li>
-            <li><a href="./" aria-current="page">English</a></li>
-            <li><a href="../vi/">Tiếng Việt</a></li>
-          </ul>
-          <a class="btn btn-primary" href="../app/">Open POS</a>
+        <nav class="nav-links" aria-label="Page navigation">
+          <a href="#demo">Live Demo</a>
+          <a href="#features">Features</a>
+          <a href="#japan-tax">Tax & Invoice</a>
+          <a href="#architecture">Benchmarks</a>
+          <a href="#roadmap">Roadmap</a>
         </nav>
+        <div class="header-actions">
+          <div class="lang-switch" aria-label="Language switcher">
+            <a href="../" lang="ja">JA</a>
+            <a href="./" class="active" lang="en">EN</a>
+            <a href="../vi/" lang="vi">VI</a>
+          </div>
+          <a class="btn btn-primary btn-sm" href="../app/?demo=ja-retail#/pos">Open Demo</a>
+        </div>
       </div>
     </header>
 
@@ -42,132 +51,330 @@
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <span class="eyebrow">MIT License · Zero Hosting Fees</span>
-            <h1 id="main-content" tabindex="-1">Offline-first browser POS built for independent shops</h1>
-            <p class="lead">
-              All products, sales, stock movements, and customer records stay locally inside your browser's IndexedDB.
-              Accept split payments, manage inventory, print multi-rate receipts, and bridge Shopify CSV exports without a backend server.
+            <span class="hero-pill">MIT Open Source · Offline PWA · Zero Servers</span>
+            <h1><em>Sell simply.</em><br />Keep clear books.</h1>
+            <p class="hero-lead">
+              An offline-first POS running directly inside the shop browser. Sales, inventory, shifts, customers, and thermal receipts stay in local IndexedDB with zero hosting cost.
             </p>
-            <div class="cta-row">
-              <a class="btn btn-primary" href="../app/?demo=ja-retail">Try Retail Demo</a>
-              <a class="btn" href="../app/?demo=ja-cafe">Cafe Demo</a>
-              <a class="btn" href="../app/?demo=ja-restaurant">Restaurant Demo</a>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="../app/?demo=ja-retail#/pos">Try Live Demo</a>
+              <a class="btn btn-ghost-dark" href="#developers">Developer Setup</a>
             </div>
-            <div class="metrics-bar" aria-label="Key capabilities">
-              <div class="metric">
-                <div class="metric-value">$0 / mo</div>
-                <div class="metric-label">No server or cloud lock-in</div>
+            <div class="hero-metrics">
+              <span>Initial JS <strong>137.3 KB</strong> (gzip)</span>
+              <span>100k-order boot <strong>340 ms</strong> (4x CPU)</span>
+              <span>Subscription <strong>$0/mo</strong></span>
+            </div>
+          </div>
+
+          <div class="device-stage">
+            <div class="desktop-frame">
+              <div class="browser-bar" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               </div>
-              <div class="metric">
-                <div class="metric-value">Offline</div>
-                <div class="metric-label">Service Worker precached</div>
+              <img
+                src="../screenshots/pos-desktop.png"
+                width="1440"
+                height="900"
+                alt="Urito POS desktop register screen"
+              />
+            </div>
+            <div class="phone-frame">
+              <img
+                src="../screenshots/pos-mobile.png"
+                width="780"
+                height="1688"
+                alt="Urito POS mobile register view"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="section">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Interactive Demo</div>
+            <h2>Explore 3 pre-seeded shop scenarios</h2>
+            <p>
+              Demo mode runs inside an isolated <code>urito-demo</code> database so store data stays untouched. Reset any time from the top banner.
+            </p>
+          </div>
+          <div class="grid-3">
+            <a class="card demo-card" href="../app/?demo=ja-retail#/pos">
+              <img src="../samples/ja/lp-01-shop-counter.webp" alt="Retail store demo counter" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Retail Shop (Urito Store)</div>
+                <div class="demo-card-desc">
+                  EAN-13 / Code128 barcodes, mixed 8% reduced food and 10% standard goods tax rates, and 30 days of historical orders.
+                </div>
+                <div class="demo-card-cta">Launch retail demo →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">vi / ja / en</div>
-                <div class="metric-label">UI &amp; per-receipt language</div>
+            </a>
+            <a class="card demo-card" href="../app/?demo=ja-cafe#/pos">
+              <img src="../samples/ja/lp-02-cafe-counter.webp" alt="Cafe counter demo" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Cafe (Kissa Urito)</div>
+                <div class="demo-card-desc">
+                  Drink size/topping modifiers, quick cash keypad, and automatic eat-in (10%) vs takeaway (8%) tax rate switching.
+                </div>
+                <div class="demo-card-cta">Launch cafe demo →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">Shopify CSV</div>
-                <div class="metric-label">Products &amp; idempotent EC orders</div>
+            </a>
+            <a class="card demo-card" href="../app/?demo=ja-restaurant#/pos">
+              <img src="../samples/ja/lp-03-phone-in-shop.webp" alt="Restaurant mobile POS demo" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Dining (Urito Diner)</div>
+                <div class="demo-card-desc">
+                  Floor tables, move/merge open tickets, parked orders, mobile bottom sheets, and formal stamped Ryoshusho receipts.
+                </div>
+                <div class="demo-card-cta">Launch diner demo →</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section section-alt">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Product Showcase</div>
+            <h2>From fast counter checkout to cross-border EC sync</h2>
+            <p>Light and dark themes, keyboard-first navigation, and unified in-store + online inventory tracking.</p>
+          </div>
+
+          <div class="grid-3">
+            <div class="shot-card">
+              <img src="../screenshots/reports-desktop.png" width="1440" height="900" alt="Sales analytics screen" />
+              <div class="shot-cap">
+                <strong>Daily & Channel Analytics</strong>
+                Instant chart rendering powered by incremental rollup tables across POS, Shopify, and other EC orders.
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="../screenshots/inventory-desktop.png" width="1440" height="900" alt="Inventory management screen" />
+              <div class="shot-cap">
+                <strong>Shared Stock & Low-Stock Reorder</strong>
+                Atomic stock ledger updates across registers, parked carts, and idempotent EC CSV imports.
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="../screenshots/pos-dark.png" width="1440" height="900" alt="Dark mode POS view" />
+              <div class="shot-cap">
+                <strong>Dark Mode & IME-Safe Shortcuts</strong>
+                Built for low-light counters with Japanese IME composition-safe search and shortcut keys.
               </div>
             </div>
           </div>
-          <div class="hero-media">
+
+          <div class="feature-chips" aria-label="Feature availability status">
+            <div class="feat-item"><span>POS Register</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Orders & Refunds</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Product Catalog</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Inventory Control</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Purchases & Suppliers</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Customer Loyalty</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Shifts & Cash Drawer</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Expenses</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Reports & Charts</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Staff PIN Auth</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Gzip Backup & Sync</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Barcode Labels</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Japan Tax & Invoice</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Shopify Product CSV</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Multi-lang & FX Catalog</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>EC Order Import</span><span class="status-pill st-stable">Stable</span></div>
+            <div class="feat-item"><span>Floor Tables</span><span class="status-pill st-beta">Beta</span></div>
+            <div class="feat-item"><span>Camera Scanner</span><span class="status-pill st-beta">Beta</span></div>
+            <div class="feat-item"><span>Delivery Tracking</span><span class="status-pill st-wip">WIP</span></div>
+            <div class="feat-item"><span>Receipt QR Code</span><span class="status-pill st-wip">WIP</span></div>
+            <div class="feat-item"><span>Shopline / Shopee CSV</span><span class="status-pill st-planned">Planned</span></div>
+            <div class="feat-item"><span>Romaji Search</span><span class="status-pill st-planned">Planned</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="japan-tax" class="section">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Japan Tax & Invoice</div>
+            <h2>Built-in Japan Qualified Invoice & Tax Compliance</h2>
+            <p>
+              All prices and taxes use strict integer minor-unit math with configurable floor, round-half-up, or ceiling rules.
+            </p>
+            <ul class="check-list">
+              <li>Per-product Standard (10%), Reduced (8%), or Exempt tax categories with automatic eat-in switching</li>
+              <li>Prints Qualified Invoice ID (<code>T</code> + 13 digits) and <code>※</code> markers on 80mm and 58mm thermal rolls</li>
+              <li>Grouped tax breakdown (<code>10%対象</code> / <code>8%対象</code>) directly on every customer receipt</li>
+              <li>Formal <strong>Ryoshusho</strong> view with revenue stamp box when total reaches ¥50,000+</li>
+            </ul>
+          </div>
+          <div class="receipt-stage">
             <img
-              src="../samples/ja/lp-01-shop-counter.webp"
-              alt="Tablet POS terminal and thermal receipt printer on a retail counter"
-              width="1200"
-              height="675"
-              fetchpriority="high"
+              src="../screenshots/receipt-sample.png"
+              alt="Sample Japanese 80mm thermal receipt with T-number and reduced tax breakdown"
             />
           </div>
         </div>
       </section>
 
-      <section class="section section-alt">
+      <section id="architecture" class="section section-alt">
         <div class="container">
-          <h2 class="section-title">Instant In-Browser Store Demos</h2>
-          <p class="section-sub">
-            Each demo seeds 30 days of realistic receipts and inventory in a separate browser database without touching your production store.
-          </p>
+          <div class="section-head">
+            <div class="section-kicker">Engineering & Benchmarks</div>
+            <h2>Measured at 100,000 orders under 4x CPU throttling</h2>
+            <p>Tested via headless Chromium CDP (<code>Emulation.setCPUThrottlingRate: 4</code>) across 3 scale tiers.</p>
+          </div>
+
           <div class="grid-3">
-            <article class="card">
-              <img
-                src="../samples/ja/lp-01-shop-counter.webp"
-                alt="Retail store checkout setup"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Retail Store</h3>
-                <p>Barcode and EAN-13 support, quantity multipliers, inventory alerts, supplier purchases, and Code 128 label sheets.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-retail">Launch Retail Demo</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="../samples/ja/lp-02-cafe-counter.webp"
-                alt="Cafe counter setup with mobile device"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Coffee Shop &amp; Cafe</h3>
-                <p>Drink size and topping modifiers plus dine-in vs. takeaway tax rules with split receipts.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-cafe">Launch Cafe Demo</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="../samples/ja/lp-03-phone-in-shop.webp"
-                alt="Mobile POS workflow in shop aisle"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Restaurant &amp; Dining</h3>
-                <p>Floor tables, open ticket holding, shift cash reconciliation, and daily profit analytics.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-restaurant">Launch Restaurant Demo</a>
-              </div>
-            </article>
+            <div class="card tech-card">
+              <span class="tech-stat">340 ms / 100k orders</span>
+              <h3>Incremental Rollup Tables</h3>
+              <p>O(days) query time on <code>dailyStats</code> and <code>dailyProductStats</code> avoids full order scans on boot and reports.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">0 reads at checkout</span>
+              <h3>Binary Image Split & LRU</h3>
+              <p>Images live in <code>productImages</code> as resized 320px WebP blobs cached by a 300-entry LRU map.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">7.2 MB .gz · 34.1 MB Heap</span>
+              <h3>Streaming Gzip Backups</h3>
+              <p>500-row primary-key streaming via <code>CompressionStream('gzip')</code> plus incremental <code>images/</code> folder sync.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">PBKDF2 · 150k iters</span>
+              <h3>Salted Offline PIN Auth</h3>
+              <p>Browser WebCrypto PBKDF2-SHA256 hashing with 16-byte random salt and failed-attempt lockout.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">Cache-First SW</span>
+              <h3>Deterministic Offline PWA</h3>
+              <p>Strict install precaching without swallowed errors and user-confirmed updates when cart has items.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">137.3 KB JS / 14.2 KB CSS</span>
+              <h3>Strict Size Budgets</h3>
+              <p>Automated CI bundle budget checks keep initial JavaScript well under the 140 KB gzip ceiling.</p>
+            </div>
+          </div>
+
+          <div class="bench-wrap">
+            <table class="bench-table" aria-label="4x CPU throttled Chromium benchmark results">
+              <thead>
+                <tr>
+                  <th>Dataset Tier</th>
+                  <th>Cold POS Load</th>
+                  <th>6-Char Search</th>
+                  <th>10-Line Checkout</th>
+                  <th>Checkout Image Reads</th>
+                  <th>1-Year Report Switch</th>
+                  <th>Streaming Gzip · Heap</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>200 products · 1,000 orders</td>
+                  <td class="num">211 ms</td>
+                  <td class="num">88 ms</td>
+                  <td class="num">820 ms</td>
+                  <td class="num">0 reads</td>
+                  <td class="num">280 ms</td>
+                  <td class="num">151 ms (80 KB) · 19.7 MB</td>
+                </tr>
+                <tr>
+                  <td>2,000 products · 20,000 orders</td>
+                  <td class="num">225 ms</td>
+                  <td class="num">80 ms</td>
+                  <td class="num">1,109 ms</td>
+                  <td class="num">0 reads</td>
+                  <td class="num">299 ms</td>
+                  <td class="num">1,216 ms (1.4 MB) · 37.4 MB</td>
+                </tr>
+                <tr>
+                  <td>5,000 products · 100,000 orders</td>
+                  <td class="num">340 ms</td>
+                  <td class="num">127 ms</td>
+                  <td class="num">944 ms</td>
+                  <td class="num">0 reads</td>
+                  <td class="num">288 ms</td>
+                  <td class="num">6,060 ms (7.2 MB) · 34.1 MB</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section id="roadmap" class="section">
         <div class="container">
-          <h2 class="section-title">Built for Real Store Operations</h2>
-          <p class="section-sub">
-            Practical safeguards designed for daily cash register operation, audits, and multi-device resilience.
-          </p>
-          <ul class="facts-list">
-            <li class="fact-box">
-              <h3>Atomic Local Storage &amp; Compressed Backups</h3>
-              <p>All ledger writes commit inside single Dexie transactions, paired with `.json.gz` gzip backups to user-chosen folders.</p>
-            </li>
-            <li class="fact-box">
-              <h3>Strict Tax &amp; Receipt Formatting</h3>
-              <p>Supports multi-rate tax rounding, Japanese Qualified Simplified Invoice formatting, and per-receipt language switching.</p>
-            </li>
-            <li class="fact-box">
-              <h3>PIN Hashing &amp; Role Permissions</h3>
-              <p>Staff PINs are stored with salted PBKDF2-SHA256 digests and lockout timers after consecutive wrong attempts.</p>
-            </li>
-            <li class="fact-box">
-              <h3>Shopify Product &amp; EC Order Bridge</h3>
-              <p>Import and export Shopify product CSVs, pull EC order histories without duplicate runs, and review channel-level revenue.</p>
-            </li>
-          </ul>
+          <div class="section-head">
+            <div class="section-kicker">Roadmap</div>
+            <h2>Three-stage feature roadmap</h2>
+            <p>Driven directly from <code>src/features/registry.ts</code> and mirrored in the in-app status page.</p>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Ready Today (Stable / Beta)</h3>
+              <ul class="check-list">
+                <li>Offline checkout, parked carts, debts & shifts</li>
+                <li>Japan 8%/10% tax, invoice slips & Ryoshusho</li>
+                <li>Shopify CSV import/export & EC SKU queue</li>
+                <li>Streaming gzip backup & folder image sync</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>In Progress (WIP)</h3>
+              <ul class="check-list">
+                <li>Dedicated delivery order dispatch workflow</li>
+                <li>Payment QR block on printed thermal receipts</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Planned Next</h3>
+              <ul class="check-list">
+                <li>Shopline & Shopee CSV order/catalog presets</li>
+                <li>Romaji incremental catalog search</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="developers" class="section section-alt">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Open Source & Privacy</div>
+            <h2>MIT Licensed · 100% Local Storage</h2>
+            <p>
+              Zero analytics, zero telemetry, zero external API calls. Data remains solely in the shop owner's browser IndexedDB and chosen backup folder.
+            </p>
+            <div class="privacy-box mt-12">
+              <strong>Backup safety note:</strong> Urito requests persistent browser storage and pairs best with File System Access backups inside a cloud-synced folder (Drive/OneDrive).
+            </div>
+          </div>
+          <div>
+            <pre class="cli">npm install
+npm run dev            # Dev server
+npm test               # Vitest suite (112 tests)
+npm run build          # Production PWA + SW
+npm run build:showcase # LP + /app bundle
+npm run build:shop     # Store deployment zip</pre>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="container">
-        <p>Urito POS · MIT License · IndexedDB Local-First Progressive Web App</p>
+      <div class="container footer-inner">
+        <div><strong>Urito POS</strong> · MIT License · Local-first browser POS</div>
+        <div class="footer-links">
+          <a href="../app/?demo=ja-retail#/pos">Open Demo</a>
+          <a href="#top">Back to top</a>
+          <a href="../" lang="ja">日本語</a>
+          <a href="./" lang="en">English</a>
+          <a href="../vi/" lang="vi">Tiếng Việt</a>
+        </div>
       </div>
     </footer>
   </body>

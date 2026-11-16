@@ -3,38 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Urito POS — 小規模店舗向け・完全オフライン対応POSシステム</title>
+    <title>Urito POS — オフライン対応・月額0円のブラウザ型 POS レジ</title>
     <meta
       name="description"
-      content="サーバー不要・アカウント不要・月額0円で使える小規模店舗・カフェ・飲食店向けPWA型POSシステム。IndexedDBローカル保存、軽減税率8%/10%・インボイス・領収書発行、Shopify CSV連携に対応。"
-    />
-    <meta property="og:title" content="Urito POS — 完全オフライン対応・ブラウザだけで動く店舗POS" />
-    <meta
-      property="og:description"
-      content="通信環境が不安定でも止まらないIndexedDBベースのレジ・在庫・売上分析アプリ。今すぐブラウザで業態別デモを体験できます。"
+      content="小規模小売・カフェ・食堂のための完全オフライン動作 PWA POS。インボイス登録番号・軽減税率8%/10%・領収書発行・Shopify連携・IndexedDB事前集計までを端末内で完結。"
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="./samples/ja/lp-01-shop-counter.webp" />
-    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg" />
+    <meta property="og:title" content="Urito POS — スッキリ販売。わかりやすい帳簿。" />
+    <meta
+      property="og:description"
+      content="サーバー不要・月額費用0円。日本の軽減税率・インボイスと10万件規模のオフライン動作に対応したオープンソース POS。"
+    />
+    <meta property="og:image" content="./ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-    <a href="#main-content" class="skip-link visually-hidden">本文へスキップ</a>
-
+  <body id="top">
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="./">
-          <img src="./icons/icon-192.svg" alt="" width="28" height="28" />
+        <a class="brand" href="#top">
+          <img src="./icons/icon.svg" width="32" height="32" alt="Urito" />
           <span>Urito POS</span>
         </a>
-        <nav class="site-nav" aria-label="メインナビゲーション">
-          <ul class="nav-links">
-            <li><a href="./" aria-current="page">日本語</a></li>
-            <li><a href="./en/">English</a></li>
-            <li><a href="./vi/">Tiếng Việt</a></li>
-          </ul>
-          <a class="btn btn-primary" href="./app/">POSを開く</a>
+        <nav class="nav-links" aria-label="ページ内ナビゲーション">
+          <a href="#demo">デモ体験</a>
+          <a href="#features">機能一覧</a>
+          <a href="#japan-tax">インボイス対応</a>
+          <a href="#architecture">性能・技術</a>
+          <a href="#roadmap">開発状況</a>
         </nav>
+        <div class="header-actions">
+          <div class="lang-switch" aria-label="言語切替">
+            <a href="./" class="active" lang="ja">JA</a>
+            <a href="./en/" lang="en">EN</a>
+            <a href="./vi/" lang="vi">VI</a>
+          </div>
+          <a class="btn btn-primary btn-sm" href="./app/?demo=ja-retail#/pos">デモを開く</a>
+        </div>
       </div>
     </header>
 
@@ -42,132 +51,335 @@
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <span class="eyebrow">MIT License · サーバー・月額料金 0円</span>
-            <h1 id="main-content" tabindex="-1">ブラウザだけで動く、小規模店舗のための軽量オフラインPOS</h1>
-            <p class="lead">
-              商品・売上・在庫・顧客データはすべて端末内の IndexedDB に保存。
-              専用機器やクラウド契約なしで、会計・軽減税率レシート・在庫棚卸・EC連携まで1つのPWAで完結します。
+            <span class="hero-pill">MIT オープンソース · PWA · サーバー不要</span>
+            <h1><em>レジはシンプル。</em><br />帳簿ははっきり。</h1>
+            <p class="hero-lead">
+              Urito は小規模ショップ・カフェ・飲食店のための完全オフライン動作 POS です。
+              売上・在庫・顧客・シフト・インボイス対応レシートをブラウザ内（IndexedDB）へ安全に保存し、月額費用ゼロで動きます。
             </p>
-            <div class="cta-row">
-              <a class="btn btn-primary" href="./app/?demo=ja-retail">小売店デモを試す</a>
-              <a class="btn" href="./app/?demo=ja-cafe">カフェデモ</a>
-              <a class="btn" href="./app/?demo=ja-restaurant">飲食店デモ</a>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="./app/?demo=ja-retail#/pos">今すぐデモを試す</a>
+              <a class="btn btn-ghost-dark" href="#developers">ローカル起動 / GitHub</a>
             </div>
-            <div class="metrics-bar" aria-label="設計仕様サマリー">
-              <div class="metric">
-                <div class="metric-value">0円</div>
-                <div class="metric-label">サーバー・月額運用費</div>
+            <div class="hero-metrics">
+              <span>初回JS <strong>137.3 KB</strong> (gzip)</span>
+              <span>10万注文時起動 <strong>340 ms</strong> (4x CPU)</span>
+              <span>月額費用 <strong>¥0</strong></span>
+            </div>
+          </div>
+
+          <div class="device-stage">
+            <div class="desktop-frame">
+              <div class="browser-bar" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               </div>
-              <div class="metric">
-                <div class="metric-value">Offline</div>
-                <div class="metric-label">Service Worker 常時動作</div>
+              <img
+                src="./screenshots/pos-desktop.png"
+                width="1440"
+                height="900"
+                alt="Urito POS デスクトップ会計画面（小売店舗デモ）"
+              />
+            </div>
+            <div class="phone-frame">
+              <img
+                src="./screenshots/pos-mobile.png"
+                width="780"
+                height="1688"
+                alt="Urito POS モバイル会計画面"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="section">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Interactive Demo</div>
+            <h2>3つの業種デモをそのまま体験</h2>
+            <p>
+              デモ環境は専用データベース（<code>urito-demo</code>）で隔離されているため、本番店舗データを汚さず何度でもリセットして試用できます。
+            </p>
+          </div>
+          <div class="grid-3">
+            <a class="card demo-card" href="./app/?demo=ja-retail#/pos">
+              <img src="./samples/ja/lp-01-shop-counter.webp" alt="小売店カウンター（うりと商店）" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">小売店（うりと商店）</div>
+                <div class="demo-card-desc">
+                  EAN-13 / Code128 バーコード、軽減税率 8% 食品と標準 10% 日用品の混在会計、30日分の販売・在庫履歴を搭載。
+                </div>
+                <div class="demo-card-cta">小売デモを開く →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">8% / 10%</div>
-                <div class="metric-label">適格簡易請求書・領収書</div>
+            </a>
+            <a class="card demo-card" href="./app/?demo=ja-cafe#/pos">
+              <img src="./samples/ja/lp-02-cafe-counter.webp" alt="カフェカウンター（喫茶うりと）" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">カフェ（喫茶うりと）</div>
+                <div class="demo-card-desc">
+                  サイズ・ミルク変更などのオプション選択、店内飲食（10%）/ テイクアウト（8%）税率自動切替を体験。
+                </div>
+                <div class="demo-card-cta">カフェデモを開く →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">Shopify CSV</div>
-                <div class="metric-label">商品・受注取込と共通在庫</div>
+            </a>
+            <a class="card demo-card" href="./app/?demo=ja-restaurant#/pos">
+              <img src="./samples/ja/lp-03-phone-in-shop.webp" alt="食堂モバイル活用（うりと食堂）" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">飲食店（うりと食堂）</div>
+                <div class="demo-card-desc">
+                  テーブル配席管理、席移動・合算、保留伝票、モバイル片手操作シートとインボイス対応領収書を体験。
+                </div>
+                <div class="demo-card-cta">食堂デモを開く →</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section section-alt">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Product Showcase</div>
+            <h2>現場の会計から日次集計・越境EC連携まで</h2>
+            <p>ライト・ダーク両テーマ対応。レジ操作を止めずに在庫・仕入・売上分析を一画面体系で運用できます。</p>
+          </div>
+
+          <div class="grid-3">
+            <div class="shot-card">
+              <img src="./screenshots/reports-desktop.png" width="1440" height="900" alt="売上レポート画面" />
+              <div class="shot-cap">
+                <strong>日次集計・チャネル別売上レポート</strong>
+                事前集計ロールアップにより年間データでも即時グラフ描画。店舗 POS と Shopify / EC の売上を合算可視化。
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="./screenshots/inventory-desktop.png" width="1440" height="900" alt="在庫管理画面" />
+              <div class="shot-cap">
+                <strong>共通在庫・ワンクリック補充発注</strong>
+                店頭会計・保留伝票・EC 受注で同一在庫を原子的に引当。在庫警告一覧から不足分を一括発注できます。
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="./screenshots/pos-dark.png" width="1440" height="900" alt="ダークテーマ POS 画面" />
+              <div class="shot-cap">
+                <strong>ダークモード＆キーボード操作</strong>
+                夜間・暗所カウンター向けダーク配色と、IME 変換に干渉しない検索ショートカット・テンキー入力。
               </div>
             </div>
           </div>
-          <div class="hero-media">
+
+          <div class="feature-chips" aria-label="実装済み・開発中・予定機能ステータス">
+            <div class="feat-item"><span>レジ画面</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>取引履歴</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>商品管理</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>在庫管理</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>仕入伝票</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>顧客管理</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>シフト・ドロア</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>経費登録</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>売上レポート</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>スタッフ権限</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>バックアップ・同期</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>ラベル印刷</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>軽減税率・インボイス</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>Shopify連携CSV</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>多言語・多通貨カタログ</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>EC受注取込・共通在庫</span><span class="status-pill st-stable">安定版</span></div>
+            <div class="feat-item"><span>テーブル管理</span><span class="status-pill st-beta">ベータ</span></div>
+            <div class="feat-item"><span>カメラバーコード</span><span class="status-pill st-beta">ベータ</span></div>
+            <div class="feat-item"><span>配送注文対応</span><span class="status-pill st-wip">開発中</span></div>
+            <div class="feat-item"><span>レシートQR印字</span><span class="status-pill st-wip">開発中</span></div>
+            <div class="feat-item"><span>Shopline・Shopee CSV</span><span class="status-pill st-planned">予定</span></div>
+            <div class="feat-item"><span>ローマ字商品検索</span><span class="status-pill st-planned">予定</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="japan-tax" class="section">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Japan Tax & Invoice</div>
+            <h2>日本のインボイス制度・軽減税率・領収書に対応</h2>
+            <p>
+              小売・飲食店向けに適格簡易請求書要件と端数処理（切捨て・四捨五入・切上げ）を整数演算エンジンに統合しています。
+            </p>
+            <ul class="check-list">
+              <li>商品ごとに標準 10%・軽減 8%・非課税を設定し、店内飲食時は自動で 10% へ切替可能</li>
+              <li>適格請求書発行事業者登録番号（<code>T</code>＋13桁半角数字）と <code>※</code> 印をサーマル幅 80mm / 58mm レシートへ印字</li>
+              <li>税率区分別の対象額・消費税額（<code>10%対象</code> / <code>8%対象</code>）を自動計算して出力</li>
+              <li>宛名・但し書き対応の <strong>領収書</strong> モードを搭載し、50,000円以上で収入印紙枠を自動表示</li>
+            </ul>
+          </div>
+          <div class="receipt-stage">
             <img
-              src="./samples/ja/lp-01-shop-counter.webp"
-              alt="タブレットPOSとサーマルプリンターが設置された小売店レジカウンターのイメージ"
-              width="1200"
-              height="675"
-              fetchpriority="high"
+              src="./screenshots/receipt-sample.png"
+              alt="T1234567890123 登録番号と※軽減税率内訳が印字された Urito サンプルレシート"
             />
           </div>
         </div>
       </section>
 
-      <section class="section section-alt">
+      <section id="architecture" class="section section-alt">
         <div class="container">
-          <h2 class="section-title">業態別の即試用デモ（ブラウザ内完結）</h2>
-          <p class="section-sub">
-            デモ起動時に過去30日分の取引・在庫データをブラウザ内に自動生成し、既存データを汚さず全画面を操作できます。
-          </p>
+          <div class="section-head">
+            <div class="section-kicker">Engineering & Benchmarks</div>
+            <h2>10万件規模・低スペック端末を前提にした設計</h2>
+            <p>
+              全項目を Chrome CDP（CPU 4倍スロットリング・<code>Emulation.setCPUThrottlingRate: 4</code>）上で実測しています。
+            </p>
+          </div>
+
           <div class="grid-3">
-            <article class="card">
-              <img
-                src="./samples/ja/lp-01-shop-counter.webp"
-                alt="小売店向けの店頭レジ運用イメージ"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>小売店（うりと商店）</h3>
-                <p>バーコード／JAN読取、数量×コード入力、軽減税率8%/10%混在レシート、在庫・仕入・ラベル印刷まで対応。</p>
-                <a class="btn btn-primary" href="./app/?demo=ja-retail">小売デモを起動</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="./samples/ja/lp-02-cafe-counter.webp"
-                alt="カフェカウンターでモバイル端末とレジを組み合わせた運用イメージ"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>カフェ（喫茶うりと）</h3>
-                <p>サイズ・氷・甘さ等のオプション加算、店内飲食（10%）とテイクアウト（8%）のイートイン税率切替に対応。</p>
-                <a class="btn btn-primary" href="./app/?demo=ja-cafe">カフェデモを起動</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="./samples/ja/lp-03-phone-in-shop.webp"
-                alt="スマートフォンのモバイルPOSで店舗在庫や会計を操作するイメージ"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>飲食店（うりと食堂）</h3>
-                <p>テーブル管理、注文の一時保留・追加注文、シフト精算、日別・時間帯別の売上と粗利集計に対応。</p>
-                <a class="btn btn-primary" href="./app/?demo=ja-restaurant">飲食店デモを起動</a>
-              </div>
-            </article>
+            <div class="card tech-card">
+              <span class="tech-stat">340 ms / 100k orders</span>
+              <h3>事前集計ロールアップ (v5/v7)</h3>
+              <p>取引確定時に <code>dailyStats</code> / <code>dailyProductStats</code> を増分更新。起動・月次レポートが全件走査不要。</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">0 reads at checkout</span>
+              <h3>画像分離＆LRUキャッシュ (300件)</h3>
+              <p>商品画像バイナリを <code>productImages</code> に分離し WebP 320px 圧縮。会計中の画像 DB 読取は 0 回を維持。</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">7.2 MB .gz · 34.1 MB Heap</span>
+              <h3>ストリーミング Gzip バックアップ</h3>
+              <p>500件単位の主キー走査と <code>CompressionStream('gzip')</code> 直結＋<code>images/</code> 差分フォルダ同期に対応。</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">PBKDF2 · 150,000 iters</span>
+              <h3>オフライン暗号 PIN 認証</h3>
+              <p>ランダム 16 バイトソルト付きの PBKDF2-SHA256 ハッシュ化と 5 回連続誤入力時のロックアウトタイマー。</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">Cache-First SW</span>
+              <h3>厳格プリキャッシュ＆更新制御</h3>
+              <p>インストール失敗を隠蔽せず、会計中の突然のリロードを防止。未会計カートがある場合は確認後に再読込。</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">137.3 KB JS / 14.2 KB CSS</span>
+              <h3>予算強制バンドル設計</h3>
+              <p>React.lazy 20 画面分割・日本語既定同梱・VI フォント動的読込により初期ロード予算（140 KB）内を維持。</p>
+            </div>
+          </div>
+
+          <div class="bench-wrap">
+            <table class="bench-table" aria-label="CPU 4倍スロットリング下でのベンチマーク実測値">
+              <thead>
+                <tr>
+                  <th>データ規模</th>
+                  <th>POS 初回起動 (4x CPU)</th>
+                  <th>6文字検索</th>
+                  <th>10明細会計完了</th>
+                  <th>会計中画像DB読取</th>
+                  <th>年間レポート切替</th>
+                  <th>Gzip 出力・ヒープ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>200商品・1,000注文</td>
+                  <td class="num">211 ms</td>
+                  <td class="num">88 ms</td>
+                  <td class="num">820 ms</td>
+                  <td class="num">0 回</td>
+                  <td class="num">280 ms</td>
+                  <td class="num">151 ms (80 KB) · 19.7 MB</td>
+                </tr>
+                <tr>
+                  <td>2,000商品・20,000注文</td>
+                  <td class="num">225 ms</td>
+                  <td class="num">80 ms</td>
+                  <td class="num">1,109 ms</td>
+                  <td class="num">0 回</td>
+                  <td class="num">299 ms</td>
+                  <td class="num">1,216 ms (1.4 MB) · 37.4 MB</td>
+                </tr>
+                <tr>
+                  <td>5,000商品・100,000注文</td>
+                  <td class="num">340 ms</td>
+                  <td class="num">127 ms</td>
+                  <td class="num">944 ms</td>
+                  <td class="num">0 回</td>
+                  <td class="num">288 ms</td>
+                  <td class="num">6,060 ms (7.2 MB) · 34.1 MB</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section id="roadmap" class="section">
         <div class="container">
-          <h2 class="section-title">店舗運用に即した堅牢な設計（Store Operation）</h2>
-          <p class="section-sub">
-            実店舗の会計・棚卸・バックアップ運用で求められるデータ保全と作業効率を標準機能として組み込んでいます。
-          </p>
-          <ul class="facts-list">
-            <li class="fact-box">
-              <h3>完全ローカル永続化と自動退避</h3>
-              <p>取引や在庫変動はトランザクションで一括更新。スキーマ更新前のOPFS自動退避やGzip圧縮バックアップ（.json.gz）に対応しています。</p>
-            </li>
-            <li class="fact-box">
-              <h3>日本のインボイス・領収書印字</h3>
-              <p>登録番号（T+13桁）の形式検証、軽減税率 ※ 注記、税率別内訳表示、5万円以上の印紙枠付き領収書印刷に対応します。</p>
-            </li>
-            <li class="fact-box">
-              <h3>権限管理とPINロックアウト</h3>
-              <p>スタッフPINはPBKDF2-SHA256でソルト付きハッシュ化し、5回連続誤入力時のロックアウト制御で誤操作・不正を防ぎます。</p>
-            </li>
-            <li class="fact-box">
-              <h3>Shopify CSV・EC受注取込</h3>
-              <p>Shopify形式の商品CSV入出力に加え、EC受注CSVからの重複防止付き取込・自動在庫引当・チャネル別集計を実行できます。</p>
-            </li>
-          </ul>
+          <div class="section-head">
+            <div class="section-kicker">Roadmap</div>
+            <h2>開発ロードマップ（3フェーズ）</h2>
+            <p>機能台帳（<code>src/features/registry.ts</code>）を単一ソースとしてアプリ内「開発状況」画面と同期しています。</p>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>運用可能（安定版・ベータ）</h3>
+              <ul class="check-list">
+                <li>レジ会計・保留・顧客売掛・シフト精算</li>
+                <li>軽減税率 8%/10%・インボイス・領収書</li>
+                <li>Shopify 商品/受注 CSV・多言語カタログ</li>
+                <li>ストリーミング Gzip・<code>images/</code> 同期</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>現在整備中（開発中）</h3>
+              <ul class="check-list">
+                <li>配送先管理・配達ステータス管理</li>
+                <li>レシート下部への決済用 QR コード印字</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>今後の予定（計画中）</h3>
+              <ul class="check-list">
+                <li>Shopline・Shopee CSV プリセット</li>
+                <li>ローマ字入力による日本語商品高速検索</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="developers" class="section section-alt">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Open Source & Privacy</div>
+            <h2>MIT ライセンス・データ完全ローカル保証</h2>
+            <p>
+              外部サーバー・トラッキング SDK・認証クラウドを一切含みません。すべての売上データ・顧客情報・商品画像は店主の端末内 IndexedDB とユーザー選択フォルダのみに保存されます。
+            </p>
+            <div class="privacy-box mt-12">
+              <strong>バックアップ運用の考え方:</strong> ブラウザキャッシュ消去に備え、<code>StorageManager.persist()</code> 要求に加えて Google Drive 等と同期するローカルフォルダへの自動バックアップを推奨しています。
+            </div>
+          </div>
+          <div>
+            <pre class="cli">npm install
+npm run dev            # ローカル開発起動
+npm test               # Vitest 全テスト (112件)
+npm run build          # PWA ビルド + SW 生成
+npm run build:showcase # LP + /app 統合生成
+npm run build:shop     # ベトナム店舗向け ZIP</pre>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="container">
-        <p>Urito POS · MIT License · IndexedDB Local-First Progressive Web App</p>
+      <div class="container footer-inner">
+        <div>
+          <strong>Urito POS</strong> · MIT License · Zero-server offline PWA POS
+        </div>
+        <div class="footer-links">
+          <a href="./app/?demo=ja-retail#/pos">デモを開く</a>
+          <a href="#top">トップへ戻る</a>
+          <a href="./" lang="ja">日本語</a>
+          <a href="./en/" lang="en">English</a>
+          <a href="./vi/" lang="vi">Tiếng Việt</a>
+        </div>
       </div>
     </footer>
   </body>

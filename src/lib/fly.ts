@@ -1,11 +1,10 @@
-/* "Fly to cart": a small clone of the tapped tile arcs into the cart, so the
- * cashier sees where the item went. Web Animations API only - no library,
- * no layout thrash, and it is skipped for reduced-motion users. */
+/* 「カートへ飛ぶ」視覚フィードバック: Web Animations API のみでタップしたタイルの縮小コピーを
+ * カート側へ放物線移動させ、prefers-reduced-motion 環境では無効化する。 */
 
 const reduced = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Where an item lands: the cart FAB on phones, the line itself on desktop. */
+/** 移動先の座標基準を取得する（モバイルでは下部カートボタン、PC では対象明細行）。 */
 function landingRect(productId: string): DOMRect | null {
   const fab = document.querySelector<HTMLElement>('.pos-cart-fab');
   if (fab && getComputedStyle(fab).display !== 'none') return fab.getBoundingClientRect();
@@ -31,7 +30,7 @@ export function flyToCart(source: HTMLElement | null, productId: string) {
   const from = source.getBoundingClientRect();
   if (!from.width) return;
 
-  // Give React a beat to render the new cart line we are aiming at.
+  // React が追加明細を描画した直後のフレームで移動先要素を取得する
   window.setTimeout(() => {
     const target = landingRect(productId);
     if (!target) return;

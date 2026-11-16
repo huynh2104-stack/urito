@@ -25,3 +25,6 @@ if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
 installKeyboardTracking();
 installGlobalErrorLogging();
 registerServiceWorker();
+if (typeof location !== 'undefined' && location.search.includes('bench=1')) {
+  void import('./lib/bench');
+}

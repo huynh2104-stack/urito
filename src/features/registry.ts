@@ -85,6 +85,20 @@ export const FEATURES: readonly FeatureEntry[] = [
     titleKey: 'feat.ecOrders',
     descKey: 'feat.ecOrdersDesc',
   },
+  {
+    id: 'other-ec-csv',
+    status: 'planned',
+    since: '0.7',
+    titleKey: 'feat.otherEcCsv',
+    descKey: 'feat.otherEcCsvDesc',
+  },
+  {
+    id: 'romaji-search',
+    status: 'planned',
+    since: '0.7',
+    titleKey: 'feat.romajiSearch',
+    descKey: 'feat.romajiSearchDesc',
+  },
 ];
 
 /** 指定されたナビゲーションパスに対応する機能ステータス（stable 以外の注記用）を返す。 */

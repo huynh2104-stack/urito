@@ -2,8 +2,7 @@ import { db } from '@/db/db';
 import { applyStockChanges } from './inventory';
 import type { Purchase, User } from '@/db/types';
 
-/** Receiving a purchase moves stock in and, optionally, refreshes the product
- *  cost so margins in the reports follow the latest buying price. */
+/** 仕入入庫を確定して在庫を加算し、必要に応じてマスタ原価も最新の仕入単価へ更新する。 */
 export async function receivePurchase(
   purchase: Purchase,
   updateCost: boolean,

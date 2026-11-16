@@ -18,8 +18,7 @@ import { toast } from './ui';
 import { useApp } from './app';
 
 export interface CartState {
-  /** Set when we are editing an order that already exists in the DB
-   *  (a held ticket or a table that is still being served). */
+  /** DB 上の既存伝票（保留伝票や提供中テーブル伝票）を再編集しているときの伝票 ID。 */
   orderId: string | null;
   orderCode: string;
   createdAt: number;

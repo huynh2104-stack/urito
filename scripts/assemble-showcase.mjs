@@ -26,6 +26,14 @@ for (const dst of [SITE_DIST]) {
   if (existsSync(iconsSrc)) {
     cpSync(iconsSrc, join(dst, 'icons'), { recursive: true });
   }
+  const shotsSrc = join(ROOT, 'site', 'screenshots');
+  if (existsSync(shotsSrc)) {
+    cpSync(shotsSrc, join(dst, 'screenshots'), { recursive: true });
+  }
+  const ogpSrc = join(ROOT, 'site', 'ogp.png');
+  if (existsSync(ogpSrc)) {
+    cpSync(ogpSrc, join(dst, 'ogp.png'));
+  }
 }
 
 rmSync(SHOWCASE_DIST, { recursive: true, force: true });

@@ -33,7 +33,7 @@ describe('商品画像LRUキャッシュとDataURL変換 (C-01)', () => {
   });
 
   it('dataUrlToImageBytes が base64 DataURL を ArrayBuffer へ正確に復号する', () => {
-    const sample = 'data:image/webp;base64,SGVsbG8='; // "Hello"
+    const sample = 'data:image/webp;base64,SGVsbG8='; // "Hello" 文字列の Base64 例
     const res = dataUrlToImageBytes(sample, 320);
     expect(res).not.toBeNull();
     expect(res!.mime).toBe('image/webp');

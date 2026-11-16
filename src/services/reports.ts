@@ -80,7 +80,7 @@ export function summariseTaxLines(orders: Order[]): TaxLine[] {
   return [...byRate.values()].sort((a, b) => b.rateBp - a.rateBp);
 }
 
-/** Cost of what the customer actually kept. */
+/** 返品控除後の実販売数量に対する原価合計。 */
 export function effectiveCogs(order: Order): number {
   return order.items.reduce((s, i) => {
     const kept = Math.max(0, i.qty - i.refundedQty);

@@ -1,4 +1,4 @@
-/** Sortable, collision-resistant ids that work offline (no server sequence). */
+/** オフライン環境でサーバー採番なしに時系列順・衝突耐性のある ID を生成する。 */
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
 
 function randomPart(len: number): string {
@@ -10,7 +10,7 @@ function randomPart(len: number): string {
   return out;
 }
 
-/** Time-prefixed id: lexicographic order == creation order. */
+/** 先頭をタイムスタンプ順とし、辞書順と作成順が一致する ID を返す。 */
 export function newId(prefix = ''): string {
   const time = Date.now().toString(36).padStart(9, '0');
   return `${prefix}${time}${randomPart(6)}`;

@@ -3,38 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Urito POS — Phần mềm bán hàng offline chạy ngay trên trình duyệt</title>
+    <title>Urito POS — Phần mềm bán hàng ngoại tuyến · Chi phí 0 đồng</title>
     <meta
       name="description"
-      content="Phần mềm POS PWA cho cửa hàng bán lẻ, quán cà phê, quán ăn. Lưu dữ liệu hoàn toàn trên máy bằng IndexedDB — không server, không phí hàng tháng, đồng bộ CSV Shopify và in hoá đơn đa ngôn ngữ."
-    />
-    <meta property="og:title" content="Urito POS — Phần mềm bán hàng offline cho cửa hàng nhỏ" />
-    <meta
-      property="og:description"
-      content="Chạy mượt ngay cả khi mất mạng. Dùng thử ngay bản demo 30 ngày dữ liệu bán hàng trên trình duyệt."
+      content="Phần mềm POS mã nguồn mở chạy trực tiếp trên trình duyệt: không cần máy chủ, bán hàng khi mất mạng, đồng bộ tồn kho đa kênh Shopify/EC và xuất hoá đơn chuẩn Nhật."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="../samples/ja/lp-01-shop-counter.webp" />
-    <link rel="icon" type="image/svg+xml" href="../icons/icon-192.svg" />
+    <meta property="og:title" content="Urito POS — Bán hàng gọn nhẹ. Sổ sách rõ ràng." />
+    <meta
+      property="og:description"
+      content="POS PWA ngoại tuyến dùng IndexedDB, hỗ trợ sao lưu nén Gzip tự động, phân quyền mã PIN và quản lý kho bán hàng."
+    />
+    <meta property="og:image" content="../ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../icons/icon-192.png" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
-  <body>
-    <a href="#main-content" class="skip-link visually-hidden">Chuyển đến nội dung chính</a>
-
+  <body id="top">
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="./">
-          <img src="../icons/icon-192.svg" alt="" width="28" height="28" />
+        <a class="brand" href="#top">
+          <img src="../icons/icon.svg" width="32" height="32" alt="Urito" />
           <span>Urito POS</span>
         </a>
-        <nav class="site-nav" aria-label="Điều hướng chính">
-          <ul class="nav-links">
-            <li><a href="../">日本語</a></li>
-            <li><a href="../en/">English</a></li>
-            <li><a href="./" aria-current="page">Tiếng Việt</a></li>
-          </ul>
-          <a class="btn btn-primary" href="../app/">Mở ứng dụng POS</a>
+        <nav class="nav-links" aria-label="Điều hướng trang">
+          <a href="#demo">Dùng thử</a>
+          <a href="#features">Tính năng</a>
+          <a href="#japan-tax">Thuế & Hoá đơn</a>
+          <a href="#architecture">Hiệu năng</a>
+          <a href="#roadmap">Lộ trình</a>
         </nav>
+        <div class="header-actions">
+          <div class="lang-switch" aria-label="Chọn ngôn ngữ">
+            <a href="../" lang="ja">JA</a>
+            <a href="../en/" lang="en">EN</a>
+            <a href="./" class="active" lang="vi">VI</a>
+          </div>
+          <a class="btn btn-primary btn-sm" href="../app/?demo=ja-retail#/pos">Mở Demo</a>
+        </div>
       </div>
     </header>
 
@@ -42,132 +51,262 @@
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <span class="eyebrow">MIT License · 0 đồng phí duy trì</span>
-            <h1 id="main-content" tabindex="-1">Phần mềm bán hàng chạy trên trình duyệt, sẵn sàng ngay khi mất mạng</h1>
-            <p class="lead">
-              Toàn bộ hàng hoá, hoá đơn, tồn kho và khách hàng được lưu trực tiếp trong IndexedDB của máy bạn.
-              Tính tiền tách phương thức, quản lý kho, xuất hoá đơn và nhập đơn EC CSV không cần thuê máy chủ.
+            <span class="hero-pill">Mã nguồn mở MIT · PWA Ngoại tuyến · Không máy chủ</span>
+            <h1><em>Bán hàng gọn nhẹ.</em><br />Sổ sách rõ ràng.</h1>
+            <p class="hero-lead">
+              Urito chạy trực tiếp trong trình duyệt cửa hàng mà không cần thuê máy chủ. Toàn bộ đơn hàng, tồn kho, ca làm và công nợ lưu an toàn trong IndexedDB ngay trên máy.
             </p>
-            <div class="cta-row">
-              <a class="btn btn-primary" href="../app/?demo=ja-retail">Thử Demo Bán lẻ</a>
-              <a class="btn" href="../app/?demo=ja-cafe">Demo Cà phê</a>
-              <a class="btn" href="../app/?demo=ja-restaurant">Demo Quán ăn</a>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="../app/?demo=ja-retail#/pos">Trải nghiệm Demo ngay</a>
+              <a class="btn btn-ghost-dark" href="#developers">Cài đặt mã nguồn</a>
             </div>
-            <div class="metrics-bar" aria-label="Thông số nổi bật">
-              <div class="metric">
-                <div class="metric-value">0 đ / tháng</div>
-                <div class="metric-label">Không server, không tài khoản</div>
+            <div class="hero-metrics">
+              <span>JS khởi động <strong>137.3 KB</strong> (gzip)</span>
+              <span>Khởi động 100k đơn <strong>340 ms</strong> (4x CPU)</span>
+              <span>Phí tháng <strong>0 ₫</strong></span>
+            </div>
+          </div>
+
+          <div class="device-stage">
+            <div class="desktop-frame">
+              <div class="browser-bar" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               </div>
-              <div class="metric">
-                <div class="metric-value">Offline</div>
-                <div class="metric-label">Lưu trữ IndexedDB &amp; SW</div>
+              <img
+                src="../screenshots/pos-desktop.png"
+                width="1440"
+                height="900"
+                alt="Màn hình thu ngân Urito POS trên máy tính"
+              />
+            </div>
+            <div class="phone-frame">
+              <img
+                src="../screenshots/pos-mobile.png"
+                width="780"
+                height="1688"
+                alt="Màn hình thu ngân Urito POS trên điện thoại"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="section">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Interactive Demo</div>
+            <h2>Dùng thử ngay 3 mô hình cửa hàng mẫu</h2>
+            <p>
+              Chế độ Demo sử dụng cơ sở dữ liệu tách biệt (<code>urito-demo</code>), có thể đặt lại bất cứ lúc nào mà không ảnh hưởng dữ liệu thật.
+            </p>
+          </div>
+          <div class="grid-3">
+            <a class="card demo-card" href="../app/?demo=ja-retail#/pos">
+              <img src="../samples/ja/lp-01-shop-counter.webp" alt="Cửa hàng bán lẻ mẫu" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Bán lẻ & Tạp hoá</div>
+                <div class="demo-card-desc">
+                  Hỗ trợ quét mã vạch EAN-13/Code128, tính thuế hỗn hợp 8%/10% và sẵn 30 ngày lịch sử đơn hàng.
+                </div>
+                <div class="demo-card-cta">Mở demo bán lẻ →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">.json.gz</div>
-                <div class="metric-label">Sao lưu nén vào thư mục máy</div>
+            </a>
+            <a class="card demo-card" href="../app/?demo=ja-cafe#/pos">
+              <img src="../samples/ja/lp-02-cafe-counter.webp" alt="Quầy cà phê mẫu" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Quán Cà phê</div>
+                <div class="demo-card-desc">
+                  Chọn tuỳ chỉnh size/topping nhanh, nhập tiền mặt một chạm và tự động phân tách thuế tại quán / mang về.
+                </div>
+                <div class="demo-card-cta">Mở demo cà phê →</div>
               </div>
-              <div class="metric">
-                <div class="metric-value">Shopify CSV</div>
-                <div class="metric-label">Xuất nhập hàng hoá &amp; đơn EC</div>
+            </a>
+            <a class="card demo-card" href="../app/?demo=ja-restaurant#/pos">
+              <img src="../samples/ja/lp-03-phone-in-shop.webp" alt="Nhà hàng mẫu" />
+              <div class="demo-card-body">
+                <div class="demo-card-title">Quán ăn & Nhà hàng</div>
+                <div class="demo-card-desc">
+                  Sơ đồ khu vực bàn, chuyển bàn/gộp đơn, lưu tạm phiếu order và giao diện di động thao tác một tay.
+                </div>
+                <div class="demo-card-cta">Mở demo nhà hàng →</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section section-alt">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-kicker">Product Showcase</div>
+            <h2>Từ quầy thu ngân đến báo cáo & đồng bộ đơn EC</h2>
+            <p>Hỗ trợ giao diện Sáng/Tối, phím tắt thân thiện bộ gõ IME và quản lý tồn kho chung đa kênh.</p>
+          </div>
+
+          <div class="grid-3">
+            <div class="shot-card">
+              <img src="../screenshots/reports-desktop.png" width="1440" height="900" alt="Màn hình báo cáo doanh thu" />
+              <div class="shot-cap">
+                <strong>Báo cáo theo ngày & kênh bán hàng</strong>
+                Bảng tổng hợp dựng sẵn hiển thị biểu đồ doanh thu tại quầy và Shopify/EC tức thì.
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="../screenshots/inventory-desktop.png" width="1440" height="900" alt="Màn hình quản lý kho" />
+              <div class="shot-cap">
+                <strong>Kho dùng chung & gợi ý nhập hàng</strong>
+                Trừ tồn kho an toàn giữa nhiều đơn giữ chỗ tại quầy và nhập đơn CSV từ sàn thương mại điện tử.
+              </div>
+            </div>
+            <div class="shot-card">
+              <img src="../screenshots/pos-dark.png" width="1440" height="900" alt="Chế độ nền tối Urito" />
+              <div class="shot-cap">
+                <strong>Chế độ Tối & tối ưu thao tác nhanh</strong>
+                Dịu mắt tại quầy buổi tối, giữ nguyên tương phản cao theo tiêu chuẩn WCAG AA.
               </div>
             </div>
           </div>
-          <div class="hero-media">
+
+          <div class="feature-chips" aria-label="Bảng trạng thái tính năng">
+            <div class="feat-item"><span>Bán hàng POS</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Lịch sử & hoàn trả</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Danh mục sản phẩm</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Quản lý tồn kho</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Nhập hàng & NCC</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Khách hàng & công nợ</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Quản lý ca & két tiền</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Chi phí cửa hàng</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Báo cáo & biểu đồ</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Nhân viên & mã PIN</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Sao lưu Gzip & gộp máy</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>In tem mã vạch</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Thuế giảm & hoá đơn Nhật</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>CSV sản phẩm Shopify</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Đa ngôn ngữ & đa tiền tệ</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Nhập đơn EC & trừ kho</span><span class="status-pill st-stable">Ổn định</span></div>
+            <div class="feat-item"><span>Sơ đồ bàn ăn</span><span class="status-pill st-beta">Beta</span></div>
+            <div class="feat-item"><span>Quét mã qua camera</span><span class="status-pill st-beta">Beta</span></div>
+            <div class="feat-item"><span>Quản lý giao hàng</span><span class="status-pill st-wip">Đang làm</span></div>
+            <div class="feat-item"><span>QR thanh toán hoá đơn</span><span class="status-pill st-wip">Đang làm</span></div>
+            <div class="feat-item"><span>CSV Shopline & Shopee</span><span class="status-pill st-planned">Kế hoạch</span></div>
+            <div class="feat-item"><span>Tìm kiếm theo Romaji</span><span class="status-pill st-planned">Kế hoạch</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="japan-tax" class="section">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Tax & Invoice</div>
+            <h2>Hỗ trợ đa tiền tệ & chuẩn Hoá đơn giảm thuế Nhật Bản</h2>
+            <p>
+              Toàn bộ phép tính dùng số nguyên đơn vị nhỏ nhất (không sai số dấu phẩy động) kèm 3 quy tắc làm tròn.
+            </p>
+            <ul class="check-list">
+              <li>Thiết lập thuế suất riêng cho từng món (10% chuẩn / 8% giảm / miễn thuế) và tự động đổi theo ăn tại chỗ</li>
+              <li>In số đăng ký kinh doanh (<code>T</code> + 13 chữ số) và ký hiệu <code>※</code> trên khổ giấy in nhiệt 80mm / 58mm</li>
+              <li>Tách dòng tổng hợp theo từng bậc thuế (<code>10%対象</code> / <code>8%対象</code>) trực tiếp trên bill</li>
+              <li>Xuất phiếu thu <strong>Ryoshusho</strong> có khung tem thu nhập khi hoá đơn đạt từ 50.000 Yên</li>
+            </ul>
+          </div>
+          <div class="receipt-stage">
             <img
-              src="../samples/ja/lp-01-shop-counter.webp"
-              alt="Quầy thu ngân cửa hàng bán lẻ với máy tính bảng và máy in hoá đơn"
-              width="1200"
-              height="675"
-              fetchpriority="high"
+              src="../screenshots/receipt-sample.png"
+              alt="Mẫu hoá đơn in nhiệt 80mm chuẩn Nhật của Urito"
             />
           </div>
         </div>
       </section>
 
-      <section class="section section-alt">
+      <section id="architecture" class="section section-alt">
         <div class="container">
-          <h2 class="section-title">Trải nghiệm ngay theo từng mô hình cửa hàng</h2>
-          <p class="section-sub">
-            Chế độ demo tạo sẵn dữ liệu 30 ngày trong cơ sở dữ liệu riêng trên trình duyệt, không ảnh hưởng tới dữ liệu thật của bạn.
-          </p>
+          <div class="section-head">
+            <div class="section-kicker">Benchmarks</div>
+            <h2>Đo kiểm thực tế ở quy mô 100.000 đơn (giới hạn CPU 4 lần)</h2>
+            <p>Đo trực tiếp trên Chromium headless qua CDP với <code>CPUThrottlingRate: 4</code>.</p>
+          </div>
+
           <div class="grid-3">
-            <article class="card">
-              <img
-                src="../samples/ja/lp-01-shop-counter.webp"
-                alt="Mô hình cửa hàng bán lẻ tạp hoá"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Cửa hàng bán lẻ</h3>
-                <p>Tìm kiếm nhanh, quét mã vạch bằng camera, nhập kho nhà cung cấp, cảnh báo sắp hết hàng và in tem mã vạch.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-retail">Mở Demo Bán lẻ</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="../samples/ja/lp-02-cafe-counter.webp"
-                alt="Quầy pha chế cà phê dùng POS"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Quán cà phê &amp; trà sữa</h3>
-                <p>Tuỳ chọn size, topping linh hoạt cùng quy tắc thuế tại quán / mang về và lưu đơn chờ thanh toán.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-cafe">Mở Demo Cà phê</a>
-              </div>
-            </article>
-            <article class="card">
-              <img
-                src="../samples/ja/lp-03-phone-in-shop.webp"
-                alt="Nhân viên kiểm tra kho hàng trên điện thoại"
-                width="600"
-                height="338"
-                loading="lazy"
-              />
-              <div class="card-body">
-                <h3>Quán ăn &amp; nhà hàng</h3>
-                <p>Sơ đồ bàn theo khu vực, kết ca thu ngân đối soát tiền mặt, báo cáo lãi ròng và gộp dữ liệu nhiều máy.</p>
-                <a class="btn btn-primary" href="../app/?demo=ja-restaurant">Mở Demo Quán ăn</a>
-              </div>
-            </article>
+            <div class="card tech-card">
+              <span class="tech-stat">340 ms / 100k đơn</span>
+              <h3>Bảng tổng hợp tăng dần (v5/v7)</h3>
+              <p>Cập nhật cộng dồn theo ngày, giúp mở POS và xem báo cáo cả năm không cần quét lại toàn bộ đơn.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">0 lần đọc ảnh khi thu tiền</span>
+              <h3>Tách bảng ảnh & LRU Cache</h3>
+              <p>Nén WebP 320px lưu riêng trong <code>productImages</code> kèm bộ đệm LRU tối đa 300 ảnh.</p>
+            </div>
+            <div class="card tech-card">
+              <span class="tech-stat">7.2 MB .gz · 34.1 MB Heap</span>
+              <h3>Sao lưu Stream Gzip theo lô 500</h3>
+              <p>Ghi luồng trực tiếp qua <code>CompressionStream('gzip')</code> và đồng bộ riêng thư mục <code>images/</code>.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section id="roadmap" class="section">
         <div class="container">
-          <h2 class="section-title">Thiết kế cho vận hành cửa hàng thực tế</h2>
-          <p class="section-sub">
-            Đảm bảo tính chính xác kế toán bằng số nguyên, bảo mật mã PIN và khả năng khôi phục dữ liệu độc lập.
-          </p>
-          <ul class="facts-list">
-            <li class="fact-box">
-              <h3>Giao dịch nguyên tử &amp; sao lưu nén Gzip</h3>
-              <p>Mọi thao tác bán, huỷ, hoàn tiền ghi đồng bộ trong một transaction và hỗ trợ sao lưu định dạng .json.gz gọn nhẹ.</p>
-            </li>
-            <li class="fact-box">
-              <h3>Đa ngôn ngữ &amp; đổi ngôn ngữ trên hoá đơn</h3>
-              <p>Lưu tên hàng đa ngôn ngữ cho sản phẩm và chọn nhanh tiếng Nhật / Anh / Việt ngay khi in hoá đơn cho khách.</p>
-            </li>
-            <li class="fact-box">
-              <h3>Bảo mật mã PIN PBKDF2-SHA256</h3>
-              <p>Mã PIN nhân viên được băm với salt ngẫu nhiên và tự động khoá tạm thời khi nhập sai quá 5 lần.</p>
-            </li>
-            <li class="fact-box">
-              <h3>Kết nối Shopify CSV &amp; đơn hàng EC</h3>
-              <p>Nhập/xuất CSV sản phẩm Shopify, đồng bộ đơn từ kênh online chống trùng lặp và thống kê doanh thu từng kênh.</p>
-            </li>
-          </ul>
+          <div class="section-head">
+            <div class="section-kicker">Roadmap</div>
+            <h2>Lộ trình phát triển 3 giai đoạn</h2>
+            <p>Đồng bộ tự động từ tệp đăng ký tính năng duy nhất <code>src/features/registry.ts</code>.</p>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Đã sẵn sàng (Ổn định / Beta)</h3>
+              <ul class="check-list">
+                <li>Bán hàng ngoại tuyến, giữ đơn, công nợ & kết ca</li>
+                <li>Thuế 8%/10%, hoá đơn T+13 số & phiếu thu Ryoshusho</li>
+                <li>Đồng bộ CSV Shopify & hàng chờ liên kết SKU EC</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Đang hoàn thiện (WIP)</h3>
+              <ul class="check-list">
+                <li>Quy trình quản lý đơn giao hàng (Delivery)</li>
+                <li>Tích hợp mã QR thanh toán dưới chân hoá đơn</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Kế hoạch tiếp theo</h3>
+              <ul class="check-list">
+                <li>Mẫu CSV sẵn cho sàn Shopline & Shopee</li>
+                <li>Tìm kiếm nhanh tiếng Nhật bằng phiên âm Romaji</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="developers" class="section section-alt">
+        <div class="container split">
+          <div>
+            <div class="section-kicker">Open Source & Privacy</div>
+            <h2>Mã nguồn mở MIT · 100% Dữ liệu tại thiết bị</h2>
+            <p>Không theo dõi hành vi, không gửi dữ liệu ra ngoài. Toàn bộ sổ sách nằm trong IndexedDB và thư mục sao lưu do chủ cửa hàng chọn.</p>
+          </div>
+          <div>
+            <pre class="cli">npm install
+npm test               # Kiểm thử Vitest (112 test)
+npm run build:showcase # Build LP + /app
+npm run build:shop     # Đóng gói bản Việt hoá Netlify</pre>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="container">
-        <p>Urito POS · MIT License · IndexedDB Local-First Progressive Web App</p>
+      <div class="container footer-inner">
+        <div><strong>Urito POS</strong> · MIT License · Phần mềm bán hàng ngoại tuyến</div>
+        <div class="footer-links">
+          <a href="../app/?demo=ja-retail#/pos">Mở Demo</a>
+          <a href="#top">Lên đầu trang</a>
+          <a href="../" lang="ja">日本語</a>
+          <a href="../en/" lang="en">English</a>
+          <a href="./" lang="vi">Tiếng Việt</a>
+        </div>
       </div>
     </footer>
   </body>

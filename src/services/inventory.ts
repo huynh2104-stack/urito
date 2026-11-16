@@ -5,7 +5,7 @@ import type { Product, StockMoveType, StockMovement, User } from '@/db/types';
 
 export interface StockChange {
   productId: string;
-  /** Signed: negative takes stock out, positive puts it back. */
+  /** 符号付き変動数（負数で出庫・減算、正数で入庫・加算）。 */
   delta: number;
   type: StockMoveType;
   cost?: number;
@@ -14,8 +14,7 @@ export interface StockChange {
   note?: string;
 }
 
-/** Applies stock deltas and writes the audit trail.
- *  Safe to call inside an outer Dexie transaction - it joins the parent scope. */
+/** 在庫増減と在庫移動履歴を書き込む。外部トランザクション内からも安全に呼び出せる。 */
 export async function applyStockChanges(changes: StockChange[], user: User | null): Promise<void> {
   const real = changes.filter((c) => c.delta !== 0);
   if (!real.length) return;
@@ -58,14 +57,14 @@ export async function applyStockChanges(changes: StockChange[], user: User | nul
   }
 
   if (updates.length) {
-    // Later entries win, so collapse duplicates before writing.
+      // 同一商品が重複する場合は後勝ちとなるよう事前に合算する
     const final = new Map(updates.map((p) => [p.id, p]));
     await db.products.bulkPut([...final.values()]);
   }
   if (movements.length) await db.stockMovements.bulkAdd(movements);
 }
 
-/** Stocktake: set the counted quantity and record the difference. */
+/** 棚卸処理: 実査数量を現在庫として反映し差分を記録する。 */
 export async function setStockLevel(
   productId: string,
   countedQty: number,

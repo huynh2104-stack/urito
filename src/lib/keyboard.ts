@@ -1,11 +1,7 @@
-/* On phones the on-screen keyboard slides up over the page without resizing
- * it (Chrome's default since v108, and always on iOS Safari), so a bottom
- * sheet with an autofocused input - "Open shift", "Cash in", "Custom item" -
- * ends up hidden behind the keys. We measure the keyboard through the Visual
- * Viewport API and expose it as the CSS variable --kb; the dialog CSS lifts
- * the sheet by exactly that much. */
+/* モバイルブラウザではソフトウェアキーボード表示時に画面高さが自動縮小されないため、
+ * Visual Viewport API でキーボード高を計測して CSS 変数 --kb に反映し、下部シートが隠れないよう持ち上げる。 */
 
-const OPEN_THRESHOLD = 80; // px: smaller gaps are browser toolbars, not a keyboard
+const OPEN_THRESHOLD = 80; // px 単位: これ未満の差分はブラウザツールバーによる変動とみなす
 
 export function installKeyboardTracking(): void {
   const vv = window.visualViewport;

@@ -49,8 +49,7 @@ export function InventoryPage() {
   const summary = useMemo(() => summariseStock(products), [products]);
   const user = useApp((s) => s.user);
 
-  /** One click from "running low" to a purchase draft: order enough to get
-   *  back to twice the minimum level (or 10 when no minimum is set). */
+    /** 在庫不足状態からワンクリックで下限在庫の2倍（未設定時は10）まで補充する発注書を作成する。 */
   const reorder = async () => {
     const low = [...summary.outOfStock, ...summary.lowStock];
     if (!low.length) return;
@@ -139,6 +138,7 @@ export function InventoryPage() {
             <div className="row gap-8 wrap">
               <SearchInput value={search} onChange={setSearch} placeholder={t('common.searchPlaceholder')} />
               <Select
+                aria-label={t('common.filter')}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as StockFilter)}
                 style={{ width: 180 }}

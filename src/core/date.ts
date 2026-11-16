@@ -32,7 +32,7 @@ export function endOfDay(ts: number | Date): number {
   return d.getTime();
 }
 
-/** Weeks start on Monday - matches how VN and JP shops read a week. */
+/** 週の起点を返す（標準は月曜始まり、設定で日曜始まりにも切替可）。 */
 export function startOfWeek(ts: number | Date, weekStartsOn: 0 | 1 = 1): number {
   const d = new Date(startOfDay(ts));
   const diff = (d.getDay() - weekStartsOn + 7) % 7;
@@ -84,7 +84,7 @@ export function rangeOf(preset: RangePreset, now = Date.now(), weekStartsOn: 0 |
   }
 }
 
-/** The equally long window immediately before `range`, for growth comparisons. */
+/** 前期間比の比較用に、指定期間と同じ長さの直前期間を返す。 */
 export function previousRange(range: DateRange): DateRange {
   const span = range.to - range.from;
   return { from: range.from - span - 1, to: range.from - 1 };

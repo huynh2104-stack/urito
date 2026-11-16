@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** A 40-line hash router. Hash routing means the built app works from any
- *  static host - or a plain folder - with no server rewrite rules. */
+/** 静的ホスティングやサーバー設定不要で動作する軽量ハッシュルーター。 */
 
 export type RoutePath = string;
 
@@ -45,7 +44,7 @@ export function useRoute(): Route {
   return route;
 }
 
-/** Scrolls the page container back to the top on navigation. */
+/** 画面遷移時にコンテナの先頭へスクロール位置を戻す。 */
 export function useScrollReset(key: string): void {
   useEffect(() => {
     document.querySelector('.page')?.scrollTo({ top: 0 });

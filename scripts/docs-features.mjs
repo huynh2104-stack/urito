@@ -51,3 +51,17 @@ mkdirSync(join(ROOT, 'docs', 'ja'), { recursive: true });
 const outPath = join(ROOT, 'docs', 'ja', 'features.md');
 writeFileSync(outPath, lines.join('\n'), 'utf8');
 console.log(`Generated ${outPath} (${FEATURES.length} entries)`);
+
+// E-01: README.md 内のマーカー間にも機能一覧テーブルを自動注入する
+const readmePath = join(ROOT, 'README.md');
+const startMark = '<!-- FEATURES:START -->';
+const endMark = '<!-- FEATURES:END -->';
+const readme = readFileSync(readmePath, 'utf8');
+const sIdx = readme.indexOf(startMark);
+const eIdx = readme.indexOf(endMark);
+if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+  const tableLines = lines.slice(4, -1); // テーブルヘッダ〜データ行
+  const injected = `${readme.slice(0, sIdx + startMark.length)}\n\n${tableLines.join('\n')}\n\n${readme.slice(eIdx)}`;
+  writeFileSync(readmePath, injected, 'utf8');
+  console.log(`Updated ${readmePath} between feature markers (${FEATURES.length} entries)`);
+}
