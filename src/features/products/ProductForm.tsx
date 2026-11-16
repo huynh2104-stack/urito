@@ -13,6 +13,7 @@ import {
 import { db } from '@/db/db';
 import { nextSeq } from '@/db/seq';
 import { newId } from '@/core/id';
+import { convertByRate, formatAmount } from '@/core/money';
 import { docPrefixes, PALETTE } from '@/db/defaults';
 import { useApp, useT } from '@/store/app';
 import { toast } from '@/store/ui';
@@ -63,7 +64,8 @@ export function ProductForm({
 }) {
   const t = useT();
   const user = useApp((s) => s.user);
-  const lang = useApp((s) => s.settings.lang);
+  const settings = useApp((s) => s.settings);
+  const lang = settings.lang;
   const isNew = !product;
   const [draft, setDraft] = useState<Product>(() => product ?? blank());
   const [busy, setBusy] = useState(false);
@@ -218,6 +220,7 @@ export function ProductForm({
           {!isNew && (
             <Button
               icon="copy"
+              aria-label={t('common.duplicate')}
               onClick={() => {
                 setPendingThumb(null);
                 setRemoveThumb(false);
@@ -340,7 +343,12 @@ export function ProductForm({
                 inputMode="numeric"
                 onChange={(e) => set('barcode', e.target.value)}
               />
-              <Button icon="scan" onClick={() => setScanning(true)} title={t('scan.title')} />
+              <Button
+                icon="scan"
+                onClick={() => setScanning(true)}
+                title={t('scan.title')}
+                aria-label={t('scan.title')}
+              />
               <Button onClick={() => void makeBarcode()} title={t('products.autoCode')}>
                 {t('products.auto')}
               </Button>
@@ -425,11 +433,20 @@ export function ProductForm({
               />
             </Field>
             <div className="grid grid-3">
-              {(['JPY', 'USD', 'VND'] as CurrencyCode[]).map((c) => (
-                <Field key={c} label={t('products.altPrice', { currency: c })}>
-                  <MoneyInput value={draft.prices?.[c] ?? 0} onChange={(v) => setAltPrice(c, v)} />
-                </Field>
-              ))}
+              {(['JPY', 'USD', 'VND'] as CurrencyCode[]).map((c) => {
+                const rate = c !== settings.currency ? (settings.exchangeRates?.[c] ?? 0) : 0;
+                const suggested = rate > 0 && draft.price > 0 ? convertByRate(draft.price, settings.currency, c, rate) : 0;
+                return (
+                  <Field key={c} label={t('products.altPrice', { currency: c })}>
+                    <MoneyInput currency={c} value={draft.prices?.[c] ?? 0} onChange={(v) => setAltPrice(c, v)} />
+                    {suggested > 0 && (draft.prices?.[c] ?? 0) !== suggested && (
+                      <Button size="sm" variant="ghost" onClick={() => setAltPrice(c, suggested)}>
+                        {t('products.suggestAltPrice', { amount: formatAmount(suggested, c, lang) })}
+                      </Button>
+                    )}
+                  </Field>
+                );
+              })}
             </div>
           </div>
         </details>

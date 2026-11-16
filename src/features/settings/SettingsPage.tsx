@@ -56,7 +56,16 @@ export function SettingsPage() {
   const clearDemo = async () => {
     await db.transaction(
       'rw',
-      [db.products, db.categories, db.modifierGroups, db.customers, db.orders, db.stockMovements, db.purchases, db.suppliers],
+      [
+        db.products,
+        db.categories,
+        db.modifierGroups,
+        db.customers,
+        db.orders,
+        db.stockMovements,
+        db.purchases,
+        db.suppliers,
+      ],
       async () => {
         await Promise.all([
           db.products.clear(),
@@ -120,9 +129,7 @@ export function SettingsPage() {
                 label={t('set.taxCode')}
                 hint={settings.lang === 'ja' ? t('set.taxCodeHint') : undefined}
                 error={
-                  settings.lang === 'ja' &&
-                  settings.taxCode.trim() !== '' &&
-                  !/^T\d{13}$/.test(settings.taxCode.trim())
+                  settings.lang === 'ja' && settings.taxCode.trim() !== '' && !/^T\d{13}$/.test(settings.taxCode.trim())
                     ? t('set.taxCodeInvalid')
                     : undefined
                 }
@@ -155,6 +162,7 @@ export function SettingsPage() {
                 <input
                   type="file"
                   accept="image/*"
+                  aria-label={t('set.uploadLogo')}
                   className="input"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -197,10 +205,7 @@ export function SettingsPage() {
                 </Select>
               </Field>
               <Field label={t('set.theme')}>
-                <Select
-                  value={settings.theme}
-                  onChange={(e) => set('theme', e.target.value as 'light' | 'dark')}
-                >
+                <Select value={settings.theme} onChange={(e) => set('theme', e.target.value as 'light' | 'dark')}>
                   <option value="light">{t('set.themeLight')}</option>
                   <option value="dark">{t('set.themeDark')}</option>
                 </Select>
@@ -232,6 +237,30 @@ export function SettingsPage() {
               </Field>
             </div>
 
+            <div className="divider" />
+
+            <Field label={t('set.exchangeRates')} hint={t('set.exchangeRatesHint')}>
+              <div className="grid grid-2 mt-4">
+                {(['JPY', 'USD', 'VND'] as CurrencyCode[])
+                  .filter((c) => c !== settings.currency)
+                  .map((c) => (
+                    <Field key={c} label={t('set.ratePerUnit', { base: settings.currency, target: c })}>
+                      <NumberInput
+                        value={settings.exchangeRates?.[c] ?? 0}
+                        min={0}
+                        step={0.01}
+                        onChange={(v) => {
+                          const next = { ...(settings.exchangeRates ?? {}) };
+                          if (v > 0) next[c] = v;
+                          else delete next[c];
+                          set('exchangeRates', next);
+                        }}
+                      />
+                    </Field>
+                  ))}
+              </div>
+            </Field>
+
             <Field label={t('set.taxMode')}>
               <Select value={settings.taxMode} onChange={(e) => set('taxMode', e.target.value as TaxMode)}>
                 <option value="none">{t('set.taxNone')}</option>
@@ -240,7 +269,7 @@ export function SettingsPage() {
               </Select>
             </Field>
 
-                        {settings.taxMode !== 'none' && (
+            {settings.taxMode !== 'none' && (
               <>
                 <div className="grid grid-3">
                   <Field label={t('tax.standardRate')}>
@@ -428,7 +457,7 @@ export function SettingsPage() {
 
               <div className="row between wrap gap-8" style={{ padding: '8px 0' }}>
                 <div>
-                  <div style={{ fontWeight: 550 }}>{t('set.clearDemo')}</div>
+                  <div style={{ fontWeight: 600 }}>{t('set.clearDemo')}</div>
                   <div className="hint">{t('set.clearDemoDesc')}</div>
                 </div>
                 <Button onClick={() => void clearDemo()}>{t('common.delete')}</Button>
@@ -438,7 +467,7 @@ export function SettingsPage() {
 
               <div className="row between wrap gap-8" style={{ padding: '8px 0' }}>
                 <div>
-                  <div style={{ fontWeight: 550 }}>{t('set.resetAll')}</div>
+                  <div style={{ fontWeight: 600 }}>{t('set.resetAll')}</div>
                   <div className="hint">{t('set.resetAllDesc')}</div>
                 </div>
                 <Button variant="danger" onClick={() => setResetOpen(true)}>

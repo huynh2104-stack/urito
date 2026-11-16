@@ -5,9 +5,9 @@ export interface CurrencyDef {
   symbol: string;
   decimals: number;
   prefix: boolean;
-  /** Quick-cash buttons offered on the payment screen, in minor units. */
+  /** 会計画面で表示するクイック現金ボタン金額（最小単位）。 */
   quickCash: number[];
-  /** Default rounding step for totals, in minor units. */
+  /** 合計金額のデフォルト端数処理単位（最小単位）。 */
   defaultRoundTo: number;
 }
 
@@ -44,13 +44,13 @@ export function localeTag(lang: Lang): string {
   return LOCALE_TAG[lang] ?? 'en-US';
 }
 
-/** Percentage of an integer amount, rounded half-up to the minor unit. */
+/** 整数金額に対するパーセンテージを四捨五入して最小単位で返す。 */
 export function percentOf(amount: number, percent: number): number {
   if (!percent) return 0;
   return Math.round((amount * percent) / 100);
 }
 
-/** Snap a total to the nearest step (VN shops usually round to 1.000 d). */
+/** 合計金額を指定単位へ端数丸めする。 */
 export function roundToStep(amount: number, step: number): number {
   if (!step || step <= 1) return Math.round(amount);
   return Math.round(amount / step) * step;
@@ -60,7 +60,7 @@ export function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
 }
 
-/** Money -> display string, e.g. 1250000 VND -> "1.250.000 d". */
+/** 最小単位の整数金額を表示文字列（例: ¥1,200 / 1.250.000 ₫）へ整形する。 */
 export function formatMoney(minor: number, currency: CurrencyCode, lang: Lang): string {
   const def = CURRENCIES[currency];
   const value = minor / 10 ** def.decimals;
@@ -122,4 +122,13 @@ export function formatNumber(n: number, lang: Lang, decimals = 0): string {
 
 export function formatPercent(n: number, lang: Lang): string {
   return `${new Intl.NumberFormat(localeTag(lang), { maximumFractionDigits: 1 }).format(n)}%`;
+}
+
+/**
+ * F-02: 主通貨の最小単位金額を手動設定為替レート（1主通貨 = rate外貨）で目標通貨の最小単位へ換算する。
+ */
+export function convertByRate(amountMinor: number, from: CurrencyCode, to: CurrencyCode, rate: number): number {
+  if (!Number.isFinite(amountMinor) || !Number.isFinite(rate) || rate <= 0) return 0;
+  const fromMajor = amountMinor / 10 ** CURRENCIES[from].decimals;
+  return Math.max(0, Math.round(fromMajor * rate * 10 ** CURRENCIES[to].decimals));
 }

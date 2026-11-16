@@ -4,7 +4,7 @@ import type { Order, OrderItem, Settings, TaxCategory } from '@/db/types';
 
 const SAMPLE_NAMES: Record<string, [string, string]> = {
   vi: ['Cà phê sữa', 'Bánh mì thịt'],
-  ja: ['ブレンドコーヒー', '玉子サンド ※テイクアウト'],
+  ja: ['ブレンドコーヒー', '玉子サンド（テイクアウト）'],
   en: ['Milk coffee', 'Sandwich'],
 };
 

@@ -1,5 +1,4 @@
-/** Vietnamese is the reference dictionary: its keys define the contract that
- *  `ja` and `en` must satisfy, so a missing translation is a build error. */
+/** 基準辞書: 本ファイルのキー集合を翻訳コントラクトとし、`ja`・`en` の翻訳漏れを型チェックで防ぐ。 */
 export const vi = {
   'app.name': 'Urito',
   'app.tagline': 'Phần mềm bán hàng cho cửa hàng nhỏ',
@@ -818,6 +817,27 @@ export const vi = {
   'channel.pos': 'Tại quầy (POS)',
   'channel.shopify': 'Shopify',
   'channel.ec': 'Kênh EC khác',
+  'common.refresh': 'Làm mới',
+  'common.moveUp': 'Chuyển lên',
+  'common.moveDown': 'Chuyển xuống',
+  'pwa.updateAvailable': 'Có phiên bản mới',
+  'bak.downloadFullWithImages': 'Tải bản sao lưu kèm ảnh (.urito.json)',
+  'bak.downloadFullHint': 'Bản sao lưu định kỳ (.json.gz) không kèm ảnh sản phẩm để giữ dung lượng nhỏ. Dùng nút trên hoặc thư mục images/ khi chuyển thiết bị.',
+  'bak.imagesSynced': 'Đã đồng bộ {n} ảnh',
+  'set.exchangeRates': 'Tỷ giá tham khảo (nhập tay)',
+  'set.exchangeRatesHint': 'Nhập tỷ giá quy đổi từ 1 đơn vị tiền tệ chính để gợi ý giá ngoại tệ khi tạo sản phẩm.',
+  'set.ratePerUnit': '{target} trên 1 {base}',
+  'products.suggestAltPrice': 'Áp dụng giá gợi ý ({amount})',
+  'orders.ecPendingTitle': 'Mặt hàng EC chờ liên kết ({n})',
+  'orders.ecPendingHint': 'Các SKU/mã vạch chưa khớp danh mục. Liên kết sản phẩm để tự động trừ kho và ghi nhớ cho lần nhập sau.',
+  'orders.ecBindProduct': 'Chọn sản phẩm liên kết',
+  'orders.ecBindBtn': 'Liên kết & trừ kho',
+  'orders.ecBoundDone': 'Đã liên kết {sku} với "{product}"',
+  'orders.ecDismissPending': 'Bỏ qua',
+  'feat.otherEcCsv': 'Liên kết CSV Shopline・Shopee',
+  'feat.otherEcCsvDesc': 'Dự kiến hỗ trợ nhập/xuất CSV đơn hàng và sản phẩm cho Shopline, Shopee và sàn TMĐT khác.',
+  'feat.romajiSearch': 'Tìm kiếm theo phiên âm Romaji',
+  'feat.romajiSearchDesc': 'Dự kiến hỗ trợ gõ Romaji để tìm nhanh sản phẩm tiếng Nhật ngoài Kana/Kanji.',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

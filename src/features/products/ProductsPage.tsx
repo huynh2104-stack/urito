@@ -8,6 +8,7 @@ import { formatQty } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
 import { confirmDialog, toast } from '@/store/ui';
 import { downloadCsv, timestampedName } from '@/services/csv';
+import { ensureRollupsBuilt } from '@/services/rollups';
 import { exportShopifyCsv } from '@/services/exchange/shopify';
 import { exportUritoCsv } from '@/services/exchange/urito';
 import { compareProductNames, matchesProduct } from '@/core/search';
@@ -47,16 +48,21 @@ export function ProductsPage() {
   }, [products, categoryId, search, settings.lang]);
 
   const remove = async (product: Product) => {
-    const used = await db.orders.filter((o) => o.items.some((i) => i.productId === product.id)).count();
+    await ensureRollupsBuilt();
+    const [statUsed, openOrders] = await Promise.all([
+      db.dailyProductStats.where('productId').equals(product.id).count(),
+      db.orders.where('status').equals('open').toArray(),
+    ]);
+    const used = statUsed > 0 || openOrders.some((o) => o.items.some((i) => i.productId === product.id));
     const ok = await confirmDialog({
       title: t('common.confirmDelete', { name: product.name }),
-      message: used > 0 ? t('products.deleteWithOrders') : t('common.cannotUndo'),
+      message: used ? t('products.deleteWithOrders') : t('common.cannotUndo'),
       confirmLabel: t('common.delete'),
       cancelLabel: t('common.cancel'),
       danger: true,
     });
     if (!ok) return;
-    if (used > 0) await db.products.update(product.id, { active: false, updatedAt: Date.now() });
+    if (used) await db.products.update(product.id, { active: false, updatedAt: Date.now() });
     else await db.products.delete(product.id);
     toast.success(t('common.deleted'));
   };
@@ -100,16 +106,16 @@ export function ProductsPage() {
           </div>
         </div>
         <div className="row gap-8">
-          <Button icon="barcode" onClick={() => navigate('/labels')}>
+          <Button icon="barcode" aria-label={t('label.title')} onClick={() => navigate('/labels')}>
             <span className="hide-sm">{t('label.title')}</span>
           </Button>
-          <Button icon="upload" onClick={() => setImporting(true)}>
+          <Button icon="upload" aria-label={t('products.importCsv')} onClick={() => setImporting(true)}>
             <span className="hide-sm">{t('products.importCsv')}</span>
           </Button>
-          <Button icon="download" onClick={exportCsv}>
+          <Button icon="download" aria-label={t('common.export')} onClick={exportCsv}>
             <span className="hide-sm">{t('common.export')}</span>
           </Button>
-          <Button icon="download" onClick={exportShopify}>
+          <Button icon="download" aria-label={t('products.exportShopify')} onClick={exportShopify}>
             <span className="hide-sm">{t('products.exportShopify')}</span>
           </Button>
           <Button variant="primary" icon="plus" onClick={() => setEditing('new')}>
@@ -133,7 +139,12 @@ export function ProductsPage() {
           <div className="card card-pad mt-16 mb-16">
             <div className="row gap-8 wrap">
               <SearchInput value={search} onChange={setSearch} placeholder={t('common.searchPlaceholder')} />
-              <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ width: 200 }}>
+              <Select
+                aria-label={t('common.category')}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                style={{ width: 200 }}
+              >
                 <option value="all">{t('common.all')}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>

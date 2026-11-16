@@ -44,8 +44,9 @@ export function makeT(lang: Lang): TFunc {
   return (key, vars) => translate(lang, key, vars);
 }
 
-/** ブラウザ言語から初期言語を推定する（ベトナム語以外は日本語を既定とする）。 */
+/** ビルドモードおよびブラウザ言語から初期言語を判定する（shop ビルドではベトナム語を既定とする）。 */
 export function detectLang(): Lang {
+  if (import.meta.env.MODE === 'shop') return 'vi';
   const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'ja';
   if (nav.startsWith('vi')) return 'vi';
   return 'ja';

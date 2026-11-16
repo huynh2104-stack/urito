@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, EmptyState, Modal, Select, SearchInput, Stat } from '@/components/ui';
-import { db } from '@/db/db';
+import { db, kvGet } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatDateTime, rangeOf, type RangePreset } from '@/core/date';
 import { useApp, useCan, useMoney, useT } from '@/store/app';
@@ -9,10 +9,19 @@ import { summarise } from '@/services/reports';
 import { downloadCsv, timestampedName } from '@/services/csv';
 import { formatAmount } from '@/core/money';
 import { OrderDetail } from './OrderDetail';
-import { importEcOrders, parseEcOrdersCsv, type EcImportResult, type ParsedEcOrder } from '@/services/ecImport';
+import {
+  dismissPendingEcMapping,
+  EC_PENDING_KV,
+  importEcOrders,
+  parseEcOrdersCsv,
+  resolvePendingEcMapping,
+  type EcImportResult,
+  type ParsedEcOrder,
+  type PendingEcMapping,
+} from '@/services/ecImport';
 import { toast } from '@/store/ui';
 import { RANGE_PRESETS, RangePicker } from '@/features/reports/RangePicker';
-import type { Order, OrderStatus } from '@/db/types';
+import type { Order, OrderStatus, Product } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
 
 const STATUS_LABEL: Record<OrderStatus, TranslationKey> = {
@@ -67,6 +76,13 @@ export function OrdersPage() {
   );
 
   const openId = route.query.get('id');
+  const pendingEc = useLiveQuery(
+    async () => (await kvGet<PendingEcMapping[]>(EC_PENDING_KV)) ?? [],
+    [],
+    [] as PendingEcMapping[],
+  );
+  const products = useLiveQuery(() => db.products.orderBy('name').toArray(), [], [] as Product[]);
+  const [bindChoices, setBindChoices] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!openId) return;
     void db.orders.get(openId).then((order) => {
@@ -166,6 +182,63 @@ export function OrdersPage() {
         <Stat label={t('rep.refunds')} value={money(summary.refunds)} tone={summary.refunds ? 'danger' : undefined} />
       </div>
 
+      {pendingEc.length > 0 && (
+        <div className="card card-body mb-16">
+          <div className="card-title mb-4">{t('orders.ecPendingTitle', { n: pendingEc.length })}</div>
+          <div className="hint mb-12">{t('orders.ecPendingHint')}</div>
+          <div className="col gap-8">
+            {pendingEc.slice(0, 10).map((item) => {
+              const targetProductId = bindChoices[item.id] ?? '';
+              return (
+                <div key={item.id} className="row wrap gap-8 between" style={{ alignItems: 'center' }}>
+                  <div className="grow">
+                    <span className="strong">{item.name}</span>
+                    {item.sku && <span className="mono dim small"> ({item.sku})</span>}
+                    <span className="dim small">
+                      {' '}
+                      · {item.externalId} × {item.qty}
+                    </span>
+                  </div>
+                  <Select
+                    aria-label={t('orders.ecBindProduct')}
+                    value={targetProductId}
+                    onChange={(e) => setBindChoices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                    style={{ width: 220 }}
+                  >
+                    <option value="">{t('orders.ecBindProduct')}</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                        {p.sku ? ` (${p.sku})` : ''}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={!targetProductId}
+                    onClick={() => {
+                      const prod = products.find((p) => p.id === targetProductId);
+                      if (!prod) return;
+                      void resolvePendingEcMapping(item.id, prod.id, user).then(() => {
+                        toast.success(
+                          t('orders.ecBoundDone', { sku: item.sku || item.name, product: prod.name }),
+                        );
+                      });
+                    }}
+                  >
+                    {t('orders.ecBindBtn')}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => void dismissPendingEcMapping(item.id)}>
+                    {t('orders.ecDismissPending')}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="card mb-16 card-pad">
         <div className="row wrap gap-8">
           <RangePicker
@@ -175,7 +248,12 @@ export function OrdersPage() {
             onRange={setCustom}
             presets={RANGE_PRESETS}
           />
-          <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} style={{ width: 170 }}>
+          <Select
+            aria-label={t('common.status')}
+            value={status}
+            onChange={(e) => setStatus(e.target.value as typeof status)}
+            style={{ width: 170 }}
+          >
             <option value="all">{t('orders.filterAll')}</option>
             <option value="paid">{t('orders.statusPaid')}</option>
             <option value="open">{t('orders.statusOpen')}</option>

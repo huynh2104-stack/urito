@@ -1,8 +1,14 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { db } from '@/db/db';
+import { db, kvGet } from '@/db/db';
 import { defaultSettings } from '@/db/defaults';
-import { importEcOrders, parseEcOrdersCsv } from './ecImport';
+import {
+  EC_PENDING_KV,
+  importEcOrders,
+  parseEcOrdersCsv,
+  resolvePendingEcMapping,
+  type PendingEcMapping,
+} from './ecImport';
 
 const SAMPLE_ORDERS_CSV = [
   'Name,Paid at,Financial Status,Billing Name,Lineitem quantity,Lineitem name,Lineitem price,Lineitem sku,Taxes,Discount Amount,Total',
@@ -68,5 +74,55 @@ describe('EC受注CSVインポートと冪等性・在庫連動 (F-03)', () => {
     const stats = await db.dailyStats.toArray();
     expect(stats).toHaveLength(1);
     expect(stats[0].byChannel.shopify).toEqual({ value: 650, count: 2 });
+
+    // F-03: refType:'ec' の在庫移動および未一致明細の紐付け待ちキューを検証する
+    const moves = await db.stockMovements.where('productId').equals('p_tea').toArray();
+    expect(moves.length).toBe(2);
+    expect(moves.every((m) => m.refType === 'ec')).toBe(true);
+
+    const pending = (await kvGet<PendingEcMapping[]>(EC_PENDING_KV)) ?? [];
+    expect(pending).toHaveLength(1);
+    expect(pending[0].sku).toBe('UNKNOWN-99');
+
+    // 未一致だった明細を手動紐付けすると在庫引当され、次回CSV取込でも学習済みとなる
+    await db.products.put({
+      id: 'p_mug',
+      sku: 'MUG-01',
+      barcode: '4900000000099',
+      name: '限定マグカップ',
+      categoryId: '',
+      price: 1500,
+      cost: 800,
+      unit: '個',
+      trackStock: true,
+      stock: 10,
+      minStock: 2,
+      isService: false,
+      active: true,
+      color: '#2563eb',
+      image: '',
+      modifierGroupIds: [],
+      favorite: false,
+      taxCategory: 'standard',
+      sort: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const resolved = await resolvePendingEcMapping(pending[0].id, 'p_mug', null);
+    expect(resolved).toBe(1);
+    expect((await db.products.get('p_mug'))?.stock).toBe(9);
+    expect((await kvGet<PendingEcMapping[]>(EC_PENDING_KV)) ?? []).toHaveLength(0);
+
+    // バーコード一致フォールバックと学習済みSKUによる自動引当
+    const extraCsv = [
+      'Name,Paid at,Financial Status,Lineitem quantity,Lineitem name,Lineitem price,Lineitem sku',
+      '#1004,2026-11-16T09:00:00+09:00,paid,2,新商品,200,4900000000023',
+      '#1005,2026-11-16T09:30:00+09:00,paid,1,マグ再注文,1500,UNKNOWN-99',
+    ].join('\n');
+    const res2 = await importEcOrders(parseEcOrdersCsv(extraCsv, { currency: 'JPY' }), { user: null, settings });
+    expect(res2.imported).toBe(2);
+    expect(res2.unresolvedSkus).toEqual([]);
+    expect((await db.products.get('p_tea'))?.stock).toBe(43);
+    expect((await db.products.get('p_mug'))?.stock).toBe(8);
   });
 });
