@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { db, kvGet, kvSet } from '@/db/db';
+import { db, ensureDbOpen, kvGet, kvSet } from '@/db/db';
 import { loadOrInitSettings } from '@/db/seed';
 import { defaultSettings } from '@/db/defaults';
 import { makeT, type TFunc } from '@/i18n';
@@ -40,6 +40,7 @@ export const useApp = create<AppState>()((set, get) => ({
   updateReady: false,
 
   async init() {
+    await ensureDbOpen();
     const settings = await loadOrInitSettings();
     applyTheme(settings.theme);
     document.documentElement.lang = settings.lang;

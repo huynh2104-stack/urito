@@ -710,4 +710,7 @@ export const ja: Dictionary = {
   'products.importUpdate': '更新 {n} 件',
   'products.importedDetail': '{added} 件を追加、{updated} 件を更新しました',
   'products.importPreviewCap': '先頭100行をプレビュー中。全{n}行を取り込みます。',
+  'bak.preUpgradeTitle': 'アップグレード前の自動退避ファイル',
+  'bak.preUpgradeDesc': 'データベース更新前に自動で作成されたバックアップです（最新2件を保持）。',
+  'bak.preUpgradeDownload': 'ダウンロード',
 };

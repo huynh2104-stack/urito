@@ -710,4 +710,7 @@ export const en: Dictionary = {
   'products.importUpdate': '{n} to update',
   'products.importedDetail': 'Added {added} and updated {updated} products',
   'products.importPreviewCap': 'Previewing the first 100 rows; all {n} will be imported.',
+  'bak.preUpgradeTitle': 'Pre-upgrade automatic backups',
+  'bak.preUpgradeDesc': 'Created automatically before a database schema upgrade (keeps the latest 2).',
+  'bak.preUpgradeDownload': 'Download',
 };

@@ -1,4 +1,6 @@
 import Dexie, { type Table } from 'dexie';
+import { LATEST_SCHEMA_VERSION, MIGRATIONS } from './migrations';
+import { runPreUpgradeBackupIfNeeded } from './preUpgrade';
 import type {
   Area,
   CashMovement,
@@ -19,8 +21,7 @@ import type {
   User,
 } from './types';
 
-/** Everything lives in the browser's IndexedDB - no server, no running cost.
- *  Dexie gives us indexes, transactions and typed tables over it. */
+/** すべてのデータはブラウザの IndexedDB に保存する（サーバー不要・運用費ゼロ）。 */
 export class UritoDB extends Dexie {
   settings!: Table<Settings, string>;
   users!: Table<User, string>;
@@ -40,31 +41,29 @@ export class UritoDB extends Dexie {
   promotions!: Table<Promotion, string>;
   kv!: Table<KV, string>;
 
-  constructor() {
-    super('urito');
-    this.version(1).stores({
-      settings: 'id',
-      users: 'id, name, role, active',
-      categories: 'id, name, sort, active',
-      modifierGroups: 'id, name, sort',
-      products: 'id, name, sku, barcode, categoryId, active, favorite, sort, stock',
-      customers: 'id, name, phone, code, active, debt, points',
-      suppliers: 'id, name, phone, active',
-      areas: 'id, sort',
-      diningTables: 'id, areaId, sort',
-      orders: 'id, code, status, type, createdAt, paidAt, customerId, shiftId, userId, tableId',
-      stockMovements: 'id, productId, type, at, refId',
-      purchases: 'id, code, supplierId, status, createdAt',
-      shifts: 'id, code, userId, status, openedAt, closedAt',
-      cashMovements: 'id, shiftId, type, at',
-      expenses: 'id, category, at, shiftId',
-      promotions: 'id, code, active',
-      kv: 'key',
-    });
+  constructor(name = 'urito') {
+    super(name);
+    for (const m of MIGRATIONS) {
+      const builder = this.version(m.version).stores(m.stores);
+      if (m.upgrade) builder.upgrade(m.upgrade);
+    }
   }
 }
 
 export const db = new UritoDB();
+
+let openReady: Promise<void> | null = null;
+
+/** スキーマ更新が必要な場合は、新バージョンを開く前に OPFS へ自動退避を行う。 */
+export function ensureDbOpen(): Promise<void> {
+  if (!openReady) {
+    openReady = (async () => {
+      await runPreUpgradeBackupIfNeeded(db.name, LATEST_SCHEMA_VERSION);
+      await db.open();
+    })();
+  }
+  return openReady;
+}
 
 /** Tables included in a backup snapshot, in restore order. */
 export const BACKUP_TABLES = [

@@ -710,6 +710,9 @@ export const vi = {
   'products.importUpdate': 'Cập nhật {n}',
   'products.importedDetail': 'Đã thêm {added} và cập nhật {updated} hàng hoá',
   'products.importPreviewCap': 'Đang xem trước 100 dòng đầu, sẽ nhập tất cả {n} dòng.',
+  'bak.preUpgradeTitle': 'Bản sao lưu tự động trước nâng cấp',
+  'bak.preUpgradeDesc': 'Được tạo tự động trước khi nâng cấp cấu trúc dữ liệu (giữ tối đa 2 bản).',
+  'bak.preUpgradeDownload': 'Tải về',
 } as const;
 
 export type TranslationKey = keyof typeof vi;
