@@ -8,6 +8,7 @@ import { useApp, useCan, useMoney, useT } from '@/store/app';
 import { toast } from '@/store/ui';
 import { printDocument } from '@/print/PrintHost';
 import { Receipt } from '@/print/Receipt';
+import { RyoshushoModal } from '@/print/Ryoshusho';
 import { refundAmountFor, refundOrder, voidOrder } from '@/services/orders';
 import type { Order, PayMethod } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
@@ -42,6 +43,7 @@ export function OrderDetail({
   const [showVoid, setShowVoid] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [showRefund, setShowRefund] = useState(false);
+  const [showRyoshu, setShowRyoshu] = useState(false);
 
   const reload = async () => {
     const fresh = await db.orders.get(order.id);
@@ -161,6 +163,11 @@ export function OrderDetail({
         <Button icon="print" onClick={() => printDocument(<Receipt order={order} />)}>
           {t('orders.reprint')}
         </Button>
+        {order.status !== 'open' && (
+          <Button icon="receipt" onClick={() => setShowRyoshu(true)}>
+            {t('orders.ryoshusho')}
+          </Button>
+        )}
         <span className="grow" />
         {canRefund && order.status === 'paid' && (
           <Button icon="refresh" onClick={() => setShowRefund(true)}>
@@ -204,6 +211,7 @@ export function OrderDetail({
           }}
         />
       )}
+      {showRyoshu && <RyoshushoModal order={order} onClose={() => setShowRyoshu(false)} />}
     </div>
   );
 }

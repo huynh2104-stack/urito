@@ -1,5 +1,6 @@
 import { formatDateTime } from '@/core/date';
 import { formatAmount, formatQty } from '@/core/money';
+import { effectiveTaxRateBp, orderTaxLinesForDisplay } from '@/core/tax';
 import { useApp, useT } from '@/store/app';
 import type { Order, PayMethod } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
@@ -14,6 +15,29 @@ const METHOD_KEY: Record<PayMethod, TranslationKey> = {
   points: 'pay.points',
 };
 
+/** 伝票コードから端末レジ番号を抽出する（接頭辞に依存しない）。 */
+export function extractDeviceNo(code: string, prefix: string): string {
+  if (!code) return '';
+  const body = prefix && code.startsWith(prefix) ? code.slice(prefix.length) : code.replace(/^[A-Za-z]+/, '');
+  const m = body.match(/^([A-Za-z0-9]{1,4})-\d{6}-/);
+  return m ? m[1] : '';
+}
+
+/** 明細行が軽減税率対象（※マーク表示対象）であるか判定する。 */
+export function isReducedTaxItem(
+  item: Order['items'][number],
+  orderType: Order['type'],
+  taxMode: Order['taxMode'],
+  settings: Parameters<typeof effectiveTaxRateBp>[2],
+): boolean {
+  const standardRateBp = settings.taxRates?.standard ?? 1000;
+  const reducedRateBp = settings.taxRates?.reduced ?? 800;
+  if (taxMode === 'none' || reducedRateBp <= 0 || reducedRateBp >= standardRateBp) return false;
+  const rateBp = item.taxRateBp ?? effectiveTaxRateBp(item.taxCategory, orderType, settings);
+  return rateBp > 0 && rateBp === reducedRateBp;
+}
+
+/** サーマルレシートおよび日本向け適格簡易請求書（軽減税率 ※・税率別内訳・登録番号対応）。 */
 export function Receipt({
   order,
   provisional = false,
@@ -29,6 +53,13 @@ export function Receipt({
   const m = (v: number) => formatAmount(v, settings.currency, lang);
 
   const hasTransfer = order.payments.some((p) => p.method === 'transfer' || p.method === 'qr');
+  const deviceNo = extractDeviceNo(order.code, settings.orderPrefix);
+
+  const isReducedItem = (item: Order['items'][number]) =>
+    isReducedTaxItem(item, order.type, order.taxMode, settings);
+
+  const hasReduced = order.items.some(isReducedItem);
+  const taxLines = order.taxMode !== 'none' ? orderTaxLinesForDisplay(order) : [];
 
   return (
     <div
@@ -57,7 +88,11 @@ export function Receipt({
       </div>
       <div className="rc-meta">
         <span>{t('rc.cashier')}: {order.userName || '—'}</span>
-        {order.tableName ? <span>{t('rc.table')}: {order.tableName}</span> : <span />}
+        <span>
+          {deviceNo ? `${t('rc.deviceNo')}: ${deviceNo}` : ''}
+          {deviceNo && order.tableName ? ' · ' : ''}
+          {order.tableName ? `${t('rc.table')}: ${order.tableName}` : ''}
+        </span>
       </div>
       {order.customerName && (
         <div className="rc-meta">
@@ -75,32 +110,44 @@ export function Receipt({
           </tr>
         </thead>
         <tbody>
-          {order.items.map((item) => (
-            <tr key={item.id}>
-              <td colSpan={4} style={{ paddingBottom: 3 }}>
-                <div className="rc-item-name">{item.name}</div>
-                {item.modifiers.length > 0 && (
-                  <div className="rc-item-sub">+ {item.modifiers.map((mo) => mo.name).join(', ')}</div>
-                )}
-                {item.note && <div className="rc-item-sub">* {item.note}</div>}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="rc-item-sub">
-                    {formatQty(item.qty, lang)}
-                    {item.unit ? ` ${item.unit}` : ''} × {m(item.gross / (item.qty || 1))}
-                  </span>
-                  <span className="rc-num">{m(item.total)}</span>
-                </div>
-                {item.discount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="rc-item-sub">{t('common.discount')}</span>
-                    <span className="rc-num">-{m(item.discount)}</span>
+          {order.items.map((item) => {
+            const reduced = isReducedItem(item);
+            return (
+              <tr key={item.id}>
+                <td colSpan={4} style={{ paddingBottom: 3 }}>
+                  <div className="rc-item-name">
+                    {item.name}
+                    {reduced ? ' ※' : ''}
                   </div>
-                )}
-              </td>
-            </tr>
-          ))}
+                  {item.modifiers.length > 0 && (
+                    <div className="rc-item-sub">+ {item.modifiers.map((mo) => mo.name).join(', ')}</div>
+                  )}
+                  {item.note && <div className="rc-item-sub">* {item.note}</div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="rc-item-sub">
+                      {formatQty(item.qty, lang)}
+                      {item.unit ? ` ${item.unit}` : ''} × {m(item.gross / (item.qty || 1))}
+                    </span>
+                    <span className="rc-num">{m(item.total)}</span>
+                  </div>
+                  {item.discount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="rc-item-sub">{t('common.discount')}</span>
+                      <span className="rc-num">-{m(item.discount)}</span>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+
+      {hasReduced && (
+        <div className="rc-line" style={{ marginTop: 2 }}>
+          {t('rc.reducedNote')}
+        </div>
+      )}
 
       <div className="rc-sep" />
 
@@ -120,14 +167,16 @@ export function Receipt({
           <span className="rc-num">{m(order.serviceCharge)}</span>
         </div>
       )}
-      {order.tax > 0 && (
-        <div className="rc-total-row">
-          <span>
-            {t('common.tax')} {order.taxRate}%{order.taxMode === 'inclusive' ? ' *' : ''}
+      {taxLines.map((line) => (
+        <div className="rc-total-row" key={line.rateBp}>
+          <span>{t('rc.taxTarget', { rate: line.rateBp / 100 })}</span>
+          <span className="rc-num">
+            {order.taxMode === 'inclusive'
+              ? `${m(line.gross)}${t('rc.taxIncludedNote', { tax: m(line.tax) })}`
+              : `${m(line.net)}${t('rc.taxExcludedNote', { tax: m(line.tax) })}`}
           </span>
-          <span className="rc-num">{m(order.tax)}</span>
         </div>
-      )}
+      ))}
       {order.pointsValue > 0 && (
         <div className="rc-total-row">
           <span>{t('rc.pointsUsed')} ({order.pointsUsed})</span>
@@ -154,6 +203,12 @@ export function Receipt({
           <span className="rc-num">{m(p.amount)}</span>
         </div>
       ))}
+      {order.paidAmount > 0 && (order.changeAmount > 0 || order.payments.length > 1) && (
+        <div className="rc-total-row">
+          <span>{t('pay.received')}</span>
+          <span className="rc-num">{m(order.paidAmount)}</span>
+        </div>
+      )}
       {order.changeAmount > 0 && (
         <div className="rc-total-row">
           <span>{t('pay.change')}</span>

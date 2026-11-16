@@ -1,19 +1,24 @@
 import { computeTotals } from '@/core/cart';
-import type { Order, OrderItem, Settings } from '@/db/types';
+import { effectiveTaxRateBp } from '@/core/tax';
+import type { Order, OrderItem, Settings, TaxCategory } from '@/db/types';
 
 const SAMPLE_NAMES: Record<string, [string, string]> = {
   vi: ['Cà phê sữa', 'Bánh mì thịt'],
-  ja: ['カフェラテ', 'サンドイッチ'],
+  ja: ['ブレンドコーヒー', '玉子サンド ※テイクアウト'],
   en: ['Milk coffee', 'Sandwich'],
 };
 
-/** A fake invoice used only to preview the receipt layout in Settings. */
+/** 設定画面のレシートプレビュー用ダミー伝票（標準10%＋軽減8%の混合例）を生成する。 */
 export function sampleOrder(settings: Settings): Order {
   const scale = settings.currency === 'VND' ? 1 : settings.currency === 'JPY' ? 1 / 170 : 1 / 25;
-  const price = (vnd: number) => Math.max(1, Math.round((vnd * scale) / (settings.currency === 'VND' ? 1 : 10)) * (settings.currency === 'VND' ? 1 : 10));
+  const price = (vnd: number) =>
+    Math.max(
+      1,
+      Math.round((vnd * scale) / (settings.currency === 'VND' ? 1 : 10)) * (settings.currency === 'VND' ? 1 : 10),
+    );
   const [nameA, nameB] = SAMPLE_NAMES[settings.lang] ?? SAMPLE_NAMES.en;
 
-  const mk = (id: string, name: string, unitPrice: number, qty: number): OrderItem => ({
+  const mk = (id: string, name: string, unitPrice: number, qty: number, taxCategory: TaxCategory): OrderItem => ({
     id,
     productId: id,
     name,
@@ -29,9 +34,13 @@ export function sampleOrder(settings: Settings): Order {
     discount: 0,
     total: unitPrice * qty,
     refundedQty: 0,
+    taxCategory,
+    taxRateBp: effectiveTaxRateBp(taxCategory, 'retail', settings),
   });
 
-  const items = [mk('s1', nameA, price(30000), 2), mk('s2', nameB, price(35000), 1)];
+  const pA = settings.currency === 'JPY' ? 450 : price(30000);
+  const pB = settings.currency === 'JPY' ? 380 : price(35000);
+  const items = [mk('s1', nameA, pA, 2, 'standard'), mk('s2', nameB, pB, 1, 'reduced')];
   const totals = computeTotals({
     items,
     discountType: 'none',
@@ -39,13 +48,17 @@ export function sampleOrder(settings: Settings): Order {
     serviceChargeRate: settings.serviceChargeRate,
     taxMode: settings.taxMode,
     taxRate: settings.taxRate,
+    taxRates: settings.taxRates,
+    taxRounding: settings.taxRounding,
+    orderType: 'retail',
+    eatInRule: settings.eatInRule,
     roundTo: settings.roundTo,
   });
 
   const now = Date.now();
   return {
     id: 'preview',
-    code: `${settings.orderPrefix}000000-0001`,
+    code: `${settings.orderPrefix}01-261116-0001`,
     type: 'retail',
     status: 'paid',
     tableId: null,
@@ -62,6 +75,7 @@ export function sampleOrder(settings: Settings): Order {
     taxMode: settings.taxMode,
     taxRate: settings.taxRate,
     tax: totals.tax,
+    taxLines: totals.taxLines,
     rounding: totals.rounding,
     total: totals.total,
     cogs: totals.cogs,

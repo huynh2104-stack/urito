@@ -116,7 +116,17 @@ export function SettingsPage() {
               <Field label={t('common.phone')}>
                 <Input value={settings.shopPhone} onChange={(e) => set('shopPhone', e.target.value)} />
               </Field>
-              <Field label={t('set.taxCode')}>
+              <Field
+                label={t('set.taxCode')}
+                hint={settings.lang === 'ja' ? t('set.taxCodeHint') : undefined}
+                error={
+                  settings.lang === 'ja' &&
+                  settings.taxCode.trim() !== '' &&
+                  !/^T\d{13}$/.test(settings.taxCode.trim())
+                    ? t('set.taxCodeInvalid')
+                    : undefined
+                }
+              >
                 <Input value={settings.taxCode} onChange={(e) => set('taxCode', e.target.value)} />
               </Field>
             </div>

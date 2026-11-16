@@ -9,6 +9,7 @@ import { payOrder, PaymentShortfallError, StockError } from '@/services/orders';
 import { notifyOrderPaid } from '@/features/backup/useAutoBackup';
 import { printDocument } from '@/print/PrintHost';
 import { Receipt } from '@/print/Receipt';
+import { RyoshushoModal } from '@/print/Ryoshusho';
 import type { Order, PayMethod } from '@/db/types';
 import type { TranslationKey } from '@/i18n';
 
@@ -42,6 +43,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<Order | null>(null);
+  const [showRyoshu, setShowRyoshu] = useState(false);
 
   const paidSoFar = entries.reduce((s, e) => s + e.amount, 0);
   const remaining = Math.max(0, totals.total - paidSoFar);
@@ -119,15 +121,19 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
       onClose();
     };
     return (
-      <Modal
-        open
-        onClose={finish}
+      <>
+        <Modal
+          open
+          onClose={finish}
         size="sm"
         title={t('pay.success')}
         footer={
           <>
             <Button icon="print" onClick={() => printDocument(<Receipt order={done} />)}>
               {t('common.print')}
+            </Button>
+            <Button icon="receipt" onClick={() => setShowRyoshu(true)}>
+              {t('orders.ryoshusho')}
             </Button>
             <span className="grow" />
             <Button
@@ -168,6 +174,8 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </Modal>
+      {showRyoshu && <RyoshushoModal order={done} onClose={() => setShowRyoshu(false)} />}
+      </>
     );
   }
 

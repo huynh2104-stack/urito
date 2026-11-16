@@ -746,6 +746,23 @@ export const vi = {
   'set.weekSunday': 'Chủ nhật',
   'set.weekMonday': 'Thứ hai',
   'tax.includedBadge': 'đã gồm thuế',
+  'set.taxCodeHint': 'Ví dụ: T1234567890123',
+  'set.taxCodeInvalid': 'Mã số chưa đúng định dạng T + 13 chữ số.',
+  'rc.deviceNo': 'Quầy',
+  'rc.reducedNote': '※ Mặt hàng áp dụng thuế suất giảm trừ',
+  'rc.taxTarget': 'Chịu thuế {rate}%',
+  'rc.taxIncludedNote': ' (gồm thuế {tax})',
+  'rc.taxExcludedNote': ' (thuế {tax})',
+  'orders.ryoshusho': 'Biên lai',
+  'ryoshu.title': 'BIÊN LAI THU TIỀN',
+  'ryoshu.addressee': 'Kính gửi',
+  'ryoshu.defaultAddressee': 'Quý khách',
+  'ryoshu.honorific': '',
+  'ryoshu.subject': 'Nội dung',
+  'ryoshu.defaultSubject': 'Tiền hàng hoá',
+  'ryoshu.confirmed': 'Đã nhận đủ số tiền nêu trên.',
+  'ryoshu.stampBox': 'Tem thuế',
+  'ryoshu.issueDate': 'Ngày xuất',
 } as const;
 
 export type TranslationKey = keyof typeof vi;
