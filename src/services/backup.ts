@@ -128,7 +128,7 @@ export async function listBackupFiles(handle: FsDirectoryHandle): Promise<Backup
   const out: BackupFileInfo[] = [];
   for await (const entry of handle.values()) {
     if (entry.kind !== 'file' || !entry.name.startsWith(FILE_PREFIX)) continue;
-    const file = await (entry as FsFileHandle).getFile();
+    const file = await entry.getFile();
     out.push({ name: entry.name, size: file.size, modifiedAt: file.lastModified });
   }
   return out.sort((a, b) => b.modifiedAt - a.modifiedAt);

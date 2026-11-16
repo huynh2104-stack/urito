@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Button } from '@/components/ui';
 import { CartLine } from './CartLine';
 import { useReserved } from '@/lib/useReserved';
+import { useNow } from '@/lib/useNow';
 import { Icon } from '@/components/Icon';
 import { formatQty } from '@/core/money';
 import { formatTime } from '@/core/date';
@@ -51,6 +52,7 @@ export function CartPanel({
   const isFood = settings.businessType !== 'retail';
 
   const reserved = useReserved();
+  const now = useNow();
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   const types: OrderType[] = isFood ? ['dine_in', 'takeaway', 'delivery'] : ['retail', 'delivery'];
@@ -66,7 +68,7 @@ export function CartPanel({
             </strong>
             <span className="slip-meta">
               {cart.orderId && !cart.orderCode ? `${t('orders.statusOpen')}, ` : ''}
-              {formatTime(cart.createdAt || Date.now(), lang)}
+              {formatTime(cart.createdAt || now, lang)}
             </span>
           </div>
           <div className="row gap-4">

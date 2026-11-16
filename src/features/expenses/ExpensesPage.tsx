@@ -176,7 +176,7 @@ function ExpenseForm({ expense, onClose }: { expense: Expense | null; onClose: (
   const [amount, setAmount] = useState(expense?.amount ?? 0);
   const [method, setMethod] = useState<PayMethod>(expense?.method ?? 'cash');
   const [note, setNote] = useState(expense?.note ?? '');
-  const [at, setAt] = useState(expense?.at ?? Date.now());
+  const [at, setAt] = useState(() => expense?.at ?? Date.now());
 
   const save = async () => {
     if (amount <= 0) return;
@@ -221,7 +221,7 @@ function ExpenseForm({ expense, onClose }: { expense: Expense | null; onClose: (
           </Select>
         </Field>
         <Field label={t('common.amount')} required>
-          <MoneyInput value={amount} onChange={setAmount} className="input-lg" autoFocus />
+          <MoneyInput value={amount} onChange={setAmount} className="input-lg" initialFocus />
         </Field>
         <div className="grid grid-2">
           <Field label={t('pay.method')}>

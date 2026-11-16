@@ -64,19 +64,25 @@ export function ProductGrid({
   // A shop can have hundreds of products with photos. Draw them in pages as the
   // cashier scrolls: far fewer DOM nodes and image downloads on a weak phone.
   const PAGE = 48;
-  const [shown, setShown] = useState(PAGE);
+  const filterKey = `${categoryId}|${search}|${view.sort}|${String(view.inStockOnly)}`;
+  const [paging, setPaging] = useState({ key: filterKey, count: PAGE });
+  const shown = paging.key === filterKey ? paging.count : PAGE;
   const sentinel = useRef<HTMLDivElement>(null);
-  useEffect(() => setShown(PAGE), [categoryId, search, view.sort, view.inStockOnly]);
   useEffect(() => {
     const el = sentinel.current;
     if (!el || shown >= products.length) return;
     const io = new IntersectionObserver(
-      (entries) => entries.some((e) => e.isIntersecting) && setShown((n) => n + PAGE),
+      (entries) =>
+        entries.some((e) => e.isIntersecting) &&
+        setPaging((prev) => ({
+          key: filterKey,
+          count: (prev.key === filterKey ? prev.count : PAGE) + PAGE,
+        })),
       { rootMargin: '600px' },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [shown, products.length]);
+  }, [shown, products.length, filterKey]);
 
   return (
     <div className="pos-left">

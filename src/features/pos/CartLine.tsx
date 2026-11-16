@@ -181,9 +181,9 @@ export function CartLine({
                 </div>
               )}
               <div className="num strong">{money(item.total)}</div>
-              {over && (
+              {over && product && (
                 <div className="tiny stock-warn">
-                  {t('pos.stockLeft', { n: formatQty(Math.max(0, product!.stock - held), lang) })}
+                  {t('pos.stockLeft', { n: formatQty(Math.max(0, product.stock - held), lang) })}
                 </div>
               )}
               {item.qty !== 1 && (

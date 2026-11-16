@@ -1,6 +1,7 @@
 import { Button, EmptyState, Modal } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
+import { useNow } from '@/lib/useNow';
 import { formatDuration, formatTime } from '@/core/date';
 import { useApp, useMoney, useT } from '@/store/app';
 import { useCart } from '@/store/cart';
@@ -13,6 +14,7 @@ export function HeldOrdersModal({ onClose }: { onClose: () => void }) {
   const money = useMoney();
   const lang = useApp((s) => s.settings.lang);
   const cart = useCart();
+  const now = useNow();
 
   const orders = useLiveQuery(
     async () => (await db.orders.where('status').equals('open').toArray()).sort((a, b) => a.createdAt - b.createdAt),
@@ -67,7 +69,7 @@ export function HeldOrdersModal({ onClose }: { onClose: () => void }) {
                   {order.customerName ? ` · ${order.customerName}` : ''}
                 </div>
                 <div className="tiny dim">
-                  {formatTime(order.createdAt, lang)} · {formatDuration(Date.now() - order.createdAt, lang)} ·{' '}
+                  {formatTime(order.createdAt, lang)} · {formatDuration(now - order.createdAt, lang)} ·{' '}
                   {t('orders.itemsCount', { n: order.items.length })}
                 </div>
               </div>

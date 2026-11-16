@@ -137,7 +137,7 @@ export function OnboardingPage() {
           <div className="col gap-16">
             <Field label={t('onboarding.shopName')} required>
               <Input
-                autoFocus
+                initialFocus
                 value={shopName}
                 placeholder={t('onboarding.shopNamePlaceholder')}
                 onChange={(e) => setShopName(e.target.value)}

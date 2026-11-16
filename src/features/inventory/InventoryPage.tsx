@@ -327,7 +327,7 @@ function StockAdjustModal({ product, onClose }: { product: Product; onClose: () 
         </div>
 
         <Field label={mode === 'adjust' ? t('inv.newStock') : t('common.quantity')}>
-          <NumberInput value={qty} onChange={setQty} min={0} autoFocus />
+          <NumberInput value={qty} onChange={setQty} min={0} initialFocus />
         </Field>
 
         <Field label={t('inv.reason')}>

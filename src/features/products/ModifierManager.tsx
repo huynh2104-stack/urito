@@ -134,7 +134,7 @@ function ModifierForm({
     >
       <div className="col gap-16">
         <Field label={t('common.name')} required hint="Size, Topping, ...">
-          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          <Input initialFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
 
         <div className="row gap-16">

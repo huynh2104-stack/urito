@@ -86,7 +86,7 @@ export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
       {creating ? (
         <div className="col gap-12">
           <Field label={t('common.name')} required>
-            <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+            <Input initialFocus value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label={t('common.phone')}>
             <Input value={phone} inputMode="tel" onChange={(e) => setPhone(e.target.value)} />
@@ -98,7 +98,7 @@ export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
             value={search}
             onChange={setSearch}
             placeholder={t('cus.searchPlaceholder')}
-            autoFocus
+            initialFocus
           />
           <div className="card" style={{ maxHeight: 380, overflowY: 'auto' }}>
             {filtered.length === 0 ? (

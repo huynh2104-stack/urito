@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Checkbox, ColorPicker, EmptyState, Field, Input, Modal, Select } from '@/components/ui';
+import { Button, Checkbox, ColorPicker, EmptyState, Field, Input, Modal, Select, SwitchRow } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
@@ -71,18 +71,12 @@ export function UsersPage() {
       )}
 
       <div className="card card-pad mb-16">
-        <label className="switch-row" style={{ border: 0, padding: 0 }}>
-          <div>
-            <div style={{ fontWeight: 550 }}>{t('set.requireLogin')}</div>
-            <div className="hint">{t('auth.selectUser')}</div>
-          </div>
-          <button
-            type="button"
-            className={`switch ${requireLogin ? 'on' : ''}`}
-            onClick={() => void updateSettings({ requireLogin: !requireLogin })}
-            aria-pressed={requireLogin}
-          />
-        </label>
+        <SwitchRow
+          label={t('set.requireLogin')}
+          hint={t('auth.selectUser')}
+          checked={requireLogin}
+          onChange={(v) => void updateSettings({ requireLogin: v })}
+        />
       </div>
 
       <div className="card">
@@ -182,7 +176,7 @@ function UserForm({ user, onClose }: { user: User | null; onClose: () => void })
     >
       <div className="col gap-12">
         <Field label={t('common.name')} required>
-          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          <Input initialFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t('user.role')} hint={t(ROLE_DESC[role])}>
           <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>

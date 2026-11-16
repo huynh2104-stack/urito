@@ -144,7 +144,7 @@ function PromotionForm({ promotion, onClose }: { promotion: Promotion | null; on
     >
       <div className="col gap-12">
         <Field label={t('common.name')} required>
-          <Input autoFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
+          <Input initialFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
         </Field>
         <Field label={t('promo.code')} hint="GIAM10, SALE2026...">
           <Input

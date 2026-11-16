@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type InputHTMLAttributes,
   type ReactNode,
+  type RefObject,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
@@ -81,8 +82,20 @@ export function Field({
   );
 }
 
-export function Input({ className = '', ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`input ${className}`} {...rest} />;
+function useInitialFocus(ref: RefObject<HTMLInputElement | null>, enabled?: boolean) {
+  useEffect(() => {
+    if (enabled) ref.current?.focus();
+  }, [ref, enabled]);
+}
+
+export function Input({
+  className = '',
+  initialFocus,
+  ...rest
+}: InputHTMLAttributes<HTMLInputElement> & { initialFocus?: boolean }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useInitialFocus(ref, initialFocus);
+  return <input ref={ref} className={`input ${className}`} {...rest} />;
 }
 
 export function Textarea({ className = '', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -160,7 +173,7 @@ export function MoneyInput({
   value,
   onChange,
   className = '',
-  autoFocus,
+  initialFocus,
   onEnter,
   id,
   disabled,
@@ -169,7 +182,7 @@ export function MoneyInput({
   value: number;
   onChange: (v: number) => void;
   className?: string;
-  autoFocus?: boolean;
+  initialFocus?: boolean;
   onEnter?: () => void;
   id?: string;
   disabled?: boolean;
@@ -177,18 +190,13 @@ export function MoneyInput({
 }) {
   const currency = useApp((s) => s.settings.currency);
   const lang = useApp((s) => s.settings.lang);
+  const ref = useRef<HTMLInputElement>(null);
+  useInitialFocus(ref, initialFocus);
+  const [isFocused, setIsFocused] = useState(false);
   const [text, setText] = useState(() => (value ? formatAmount(value, currency, lang) : ''));
-  const focused = useRef(false);
 
-  // Re-sync whenever the owner changes the amount behind our back (a quick-cash
-  // button, "exact", a keypad press) - but leave half-typed text alone, so the
-  // field never fights the cashier mid-entry.
-  useEffect(() => {
-    if (parseMoney(text, currency) !== value) {
-      setText(value ? formatAmount(value, currency, lang) : '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, currency, lang]);
+  const formatted = value ? formatAmount(value, currency, lang) : '';
+  const displayValue = isFocused ? text : formatted;
 
   const handle = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -198,20 +206,20 @@ export function MoneyInput({
 
   return (
     <input
+      ref={ref}
       id={id}
       className={`input input-money ${className}`}
       inputMode="numeric"
-      value={text}
+      value={displayValue}
       disabled={disabled}
       placeholder={placeholder}
-      autoFocus={autoFocus}
       onFocus={(e) => {
-        focused.current = true;
+        setIsFocused(true);
+        setText(formatted);
         e.target.select();
       }}
       onBlur={() => {
-        focused.current = false;
-        setText(value ? formatAmount(value, currency, lang) : '');
+        setIsFocused(false);
       }}
       onChange={handle}
       onKeyDown={(e) => {
@@ -228,6 +236,7 @@ export function NumberInput({
   max,
   step = 1,
   className = '',
+  initialFocus,
   ...rest
 }: {
   value: number;
@@ -236,9 +245,13 @@ export function NumberInput({
   max?: number;
   step?: number;
   className?: string;
+  initialFocus?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'min' | 'max' | 'step'>) {
+  const ref = useRef<HTMLInputElement>(null);
+  useInitialFocus(ref, initialFocus);
   return (
     <input
+      ref={ref}
       type="number"
       className={`input ${className}`}
       value={Number.isFinite(value) ? value : 0}
@@ -298,6 +311,7 @@ export function Modal({
   return createPortal(
     <div
       className="overlay"
+      role="presentation"
       onMouseDown={(e) => {
         if (closeOnOverlay && e.target === e.currentTarget) onClose();
       }}
@@ -379,28 +393,30 @@ export function SearchInput({
   value,
   onChange,
   placeholder,
-  autoFocus,
+  initialFocus,
   inputRef,
   onKeyDown,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  autoFocus?: boolean;
+  initialFocus?: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
+  const localRef = useRef<HTMLInputElement>(null);
+  const targetRef = inputRef ?? localRef;
+  useInitialFocus(targetRef, initialFocus);
   return (
     <div className="search-wrap">
       <span className="search-icon">
         <Icon name="search" size={15} />
       </span>
       <input
-        ref={inputRef}
+        ref={targetRef}
         className="input"
         value={value}
         placeholder={placeholder}
-        autoFocus={autoFocus}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
       />
@@ -482,13 +498,19 @@ export function ToastHost() {
   return createPortal(
     <div className="toast-stack">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast toast-${t.kind}`} onClick={() => dismiss(t.id)}>
+        <button
+          type="button"
+          key={t.id}
+          className={`toast toast-${t.kind}`}
+          onClick={() => dismiss(t.id)}
+          style={{ width: '100%', textAlign: 'left', font: 'inherit', color: 'inherit', cursor: 'pointer' }}
+        >
           <Icon
             name={t.kind === 'success' ? 'check' : t.kind === 'error' ? 'alert' : t.kind === 'warning' ? 'alert' : 'info'}
             size={16}
           />
           <span className="grow">{t.message}</span>
-        </div>
+        </button>
       ))}
     </div>,
     document.body,
@@ -519,16 +541,47 @@ export function PromptModal({
   onCancel: () => void;
   onSubmit: (value: string) => void;
 }) {
+  if (!open) return null;
+  return (
+    <PromptModalBody
+      title={title}
+      label={label}
+      initial={initial}
+      placeholder={placeholder}
+      multiline={multiline}
+      confirmLabel={confirmLabel}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function PromptModalBody({
+  title,
+  label,
+  initial,
+  placeholder,
+  multiline,
+  confirmLabel,
+  onCancel,
+  onSubmit,
+}: {
+  title: string;
+  label?: string;
+  initial: string;
+  placeholder?: string;
+  multiline?: boolean;
+  confirmLabel?: string;
+  onCancel: () => void;
+  onSubmit: (value: string) => void;
+}) {
   const t = useT();
   const [value, setValue] = useState(initial);
   const id = useId();
-  useEffect(() => {
-    if (open) setValue(initial);
-  }, [open, initial]);
 
   return (
     <Modal
-      open={open}
+      open
       onClose={onCancel}
       size="sm"
       title={title}
@@ -548,7 +601,7 @@ export function PromptModal({
           <Input
             id={id}
             value={value}
-            autoFocus
+            initialFocus
             placeholder={placeholder}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {

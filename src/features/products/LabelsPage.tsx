@@ -19,6 +19,17 @@ const SIZES: Record<LabelSize, { page: string; w: string; h: string; perSheet: n
   'a4-65': { page: 'A4', w: '38.1mm', h: '21.2mm', perSheet: 65 },
 };
 
+async function assignMissingBarcodes(missing: Product[], allProducts: Product[]): Promise<number> {
+  const taken = new Set(allProducts.map((p) => p.barcode).filter(Boolean));
+  const now = Date.now();
+  for (const p of missing) {
+    const code = generateInternalBarcode(taken);
+    taken.add(code);
+    await db.products.update(p.id, { barcode: code, updatedAt: now });
+  }
+  return missing.length;
+}
+
 export function LabelsPage() {
   const t = useT();
   const money = useMoney();
@@ -45,13 +56,8 @@ export function LabelsPage() {
   const fillMissingBarcodes = async () => {
     const missing = chosen.filter((p) => !p.barcode);
     if (!missing.length) return;
-    const taken = new Set(products.map((p) => p.barcode).filter(Boolean));
-    for (const p of missing) {
-      const code = generateInternalBarcode(taken);
-      taken.add(code);
-      await db.products.update(p.id, { barcode: code, updatedAt: Date.now() });
-    }
-    toast.success(t('label.generated', { n: missing.length }));
+    const count = await assignMissingBarcodes(missing, products);
+    toast.success(t('label.generated', { n: count }));
   };
 
   const print = () => {

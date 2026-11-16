@@ -40,7 +40,7 @@ export function SettingsPage() {
     void estimateStorage().then(setStorage);
   }, []);
 
-  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => void updateSettings({ [key]: value } as Partial<Settings>);
+  const set = <K extends keyof Settings>(key: K, value: Settings[K]) => void updateSettings({ [key]: value });
 
   const uploadLogo = async (file: File) => {
     const dataUrl = await shrinkImage(file, 320, 'image/png');
@@ -387,7 +387,7 @@ function ResetModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: ()
     >
       <div className="callout callout-danger mb-12">{t('set.resetAllDesc')}</div>
       <Field label={t('set.resetConfirm')}>
-        <Input autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
+        <Input initialFocus value={value} onChange={(e) => setValue(e.target.value)} />
       </Field>
     </Modal>
   );

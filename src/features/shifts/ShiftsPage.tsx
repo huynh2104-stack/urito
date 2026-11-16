@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, EmptyState, Field, Input, Modal, MoneyInput, Stat, Textarea } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
+import { useNow } from '@/lib/useNow';
 import { formatDateTime, formatDuration, formatTime } from '@/core/date';
 import { useApp, useMoney, useT } from '@/store/app';
 import { toast } from '@/store/ui';
-import { addCashMovement, closeShift, loadShiftData, openShift, type ShiftTotals } from '@/services/shifts';
+import { addCashMovement, closeShift, loadShiftData, openShift } from '@/services/shifts';
 import { printDocument } from '@/print/PrintHost';
 import { ShiftReceipt } from '@/print/ShiftReceipt';
 import { navigate, useRoute } from '@/router';
-import type { CashMovement, Shift } from '@/db/types';
+import type { Shift } from '@/db/types';
 
 export function ShiftsPage() {
   const t = useT();
@@ -17,12 +18,11 @@ export function ShiftsPage() {
   const { user, shift, reloadShift, settings, signOut, users } = useApp();
   const route = useRoute();
   const handoverRequested = route.query.get('handover') === '1';
-  const [handover, setHandover] = useState(false);
+  const now = useNow();
 
-  const [totals, setTotals] = useState<ShiftTotals | null>(null);
-  const [movements, setMovements] = useState<CashMovement[]>([]);
   const [showOpen, setShowOpen] = useState(false);
   const [showClose, setShowClose] = useState(false);
+  const [handoverMode, setHandoverMode] = useState(false);
   const [cashDialog, setCashDialog] = useState<'in' | 'out' | null>(null);
 
   const history = useLiveQuery(
@@ -30,36 +30,15 @@ export function ShiftsPage() {
     [],
     [] as Shift[],
   );
-  const orderCount = useLiveQuery(
-    async () => (shift ? db.orders.where('shiftId').equals(shift.id).count() : 0),
+  const shiftData = useLiveQuery(
+    async () => (shift ? loadShiftData(shift) : null),
     [shift?.id],
-    0,
+    null,
   );
-
-  useEffect(() => {
-    if (handoverRequested && shift) {
-      setHandover(true);
-      setShowClose(true);
-      navigate('/shifts', true);
-    }
-  }, [handoverRequested, shift]);
-
-  useEffect(() => {
-    if (!shift) {
-      setTotals(null);
-      setMovements([]);
-      return;
-    }
-    let cancelled = false;
-    void loadShiftData(shift).then((data) => {
-      if (cancelled) return;
-      setTotals(data.totals);
-      setMovements(data.movements);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [shift, orderCount]);
+  const totals = shiftData?.totals ?? null;
+  const movements = shiftData?.movements ?? [];
+  const isHandover = handoverMode || handoverRequested;
+  const closeModalOpen = showClose || (handoverRequested && !!shift);
 
   const doOpen = async (openingCash: number, note: string) => {
     if (!user) return;
@@ -75,11 +54,12 @@ export function ShiftsPage() {
     const data = await loadShiftData(closed);
     await reloadShift();
     setShowClose(false);
+    setHandoverMode(false);
+    if (handoverRequested) navigate('/shifts', true);
     toast.success(t('shift.closed'));
     printDocument(<ShiftReceipt shift={closed} totals={data.totals} />);
-    // Handover: the drawer is counted, now hand the screen to the next person.
-    if (handover && users.length > 1) {
-      setHandover(false);
+    // 引き継ぎ：レジ締め後に次の担当者へ画面を渡す
+    if (isHandover && users.length > 1) {
       setTimeout(() => void signOut(), 400);
     }
   };
@@ -87,9 +67,6 @@ export function ShiftsPage() {
   const addCash = async (type: 'in' | 'out', amount: number, reason: string) => {
     if (!shift || amount <= 0) return;
     await addCashMovement(shift, type, amount, reason, '', user);
-    const data = await loadShiftData(shift);
-    setTotals(data.totals);
-    setMovements(data.movements);
     setCashDialog(null);
     toast.success(t('common.saved'));
   };
@@ -119,7 +96,7 @@ export function ShiftsPage() {
                 variant="primary"
                 icon="users"
                 onClick={() => {
-                  setHandover(true);
+                  setHandoverMode(true);
                   setShowClose(true);
                 }}
               >
@@ -153,7 +130,7 @@ export function ShiftsPage() {
             <div className="grid grid-4 mb-16">
               <Stat
                 label={t('shift.duration')}
-                value={formatDuration(Date.now() - shift.openedAt, settings.lang)}
+                value={formatDuration(now - shift.openedAt, settings.lang)}
                 hint={`${formatTime(shift.openedAt, settings.lang)} →`}
               />
               <Stat label={t('rep.orderCount')} value={String(totals.orderCount)} />
@@ -261,16 +238,17 @@ export function ShiftsPage() {
         )}
       </div>
 
-      {showOpen && <OpenShiftModal onClose={() => setShowOpen(false)} onSubmit={doOpen} />}
-      {showClose && shift && totals && (
+      {showOpen && <OpenShiftModal onClose={() => setShowOpen(false)} onSubmit={(c, n) => void doOpen(c, n)} />}
+      {closeModalOpen && shift && totals && (
         <CloseShiftModal
           expected={totals.expectedCash}
-          handover={handover}
+          handover={isHandover}
           onClose={() => {
             setShowClose(false);
-            setHandover(false);
+            setHandoverMode(false);
+            if (handoverRequested) navigate('/shifts', true);
           }}
-          onSubmit={doClose}
+          onSubmit={(c, n) => void doClose(c, n)}
         />
       )}
       {cashDialog && (
@@ -320,7 +298,7 @@ function OpenShiftModal({
     >
       <div className="col gap-12">
         <Field label={t('shift.openingCash')}>
-          <MoneyInput value={cash} onChange={setCash} className="input-lg" autoFocus />
+          <MoneyInput value={cash} onChange={setCash} className="input-lg" initialFocus />
         </Field>
         <Field label={t('common.note')}>
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
@@ -368,7 +346,7 @@ function CloseShiftModal({
           {t('shift.expectedCash')}: <strong className="num">{money(expected)}</strong>
         </div>
         <Field label={t('shift.countedCash')}>
-          <MoneyInput value={counted} onChange={setCounted} className="input-lg" autoFocus />
+          <MoneyInput value={counted} onChange={setCounted} className="input-lg" initialFocus />
         </Field>
         <div className={`callout ${diff === 0 ? 'callout-success' : diff > 0 ? '' : 'callout-danger'}`}>
           <div className="row between">
@@ -415,7 +393,7 @@ function CashMovementModal({
     >
       <div className="col gap-12">
         <Field label={t('common.amount')}>
-          <MoneyInput value={amount} onChange={setAmount} className="input-lg" autoFocus />
+          <MoneyInput value={amount} onChange={setAmount} className="input-lg" initialFocus />
         </Field>
         <Field label={t('shift.reason')}>
           <Input value={reason} onChange={(e) => setReason(e.target.value)} />

@@ -245,7 +245,7 @@ function CustomerForm({
       <div className="col gap-12">
         <div className="grid grid-2">
           <Field label={t('common.name')} required>
-            <Input autoFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
+            <Input initialFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
           </Field>
           <Field label={t('common.phone')}>
             <Input value={draft.phone} inputMode="tel" onChange={(e) => set('phone', e.target.value)} />
@@ -320,7 +320,7 @@ function CustomerDetail({ customer, onClose }: { customer: Customer; onClose: ()
               {paying ? (
                 <span className="row gap-8">
                   <div style={{ width: 160 }}>
-                    <MoneyInput value={amount} onChange={setAmount} autoFocus />
+                    <MoneyInput value={amount} onChange={setAmount} initialFocus />
                   </div>
                   <Button variant="primary" size="sm" onClick={() => void collect()}>
                     {t('common.confirm')}

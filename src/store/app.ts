@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { db, kvGet, kvSet } from '@/db/db';
 import { loadOrInitSettings } from '@/db/seed';
@@ -128,9 +129,12 @@ export interface MoneyFormatter {
 export function useMoney(): MoneyFormatter {
   const currency = useApp((s) => s.settings.currency);
   const lang = useApp((s) => s.settings.lang);
-  const fn = ((minor: number) => formatMoney(minor, currency, lang)) as MoneyFormatter;
-  fn.plain = (minor: number) => formatAmount(minor, currency, lang);
-  return fn;
+  return useMemo(() => {
+    const fn = ((minor: number) => formatMoney(minor, currency, lang)) as MoneyFormatter;
+    return Object.assign(fn, {
+      plain: (minor: number) => formatAmount(minor, currency, lang),
+    });
+  }, [currency, lang]);
 }
 
 export function useLang() {

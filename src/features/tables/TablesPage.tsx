@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button, EmptyState, Field, Input, Modal, NumberInput, Select, Stat } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
+import { useNow } from '@/lib/useNow';
 import { newId } from '@/core/id';
 import { formatDuration } from '@/core/date';
 import { useMoney, useT } from '@/store/app';
@@ -18,9 +19,35 @@ export function sortTables(tables: DiningTable[], areas: Area[]): DiningTable[] 
   );
 }
 
+async function persistTableMove(order: Order, target: DiningTable, existing: Order | undefined): Promise<'merged' | 'moved'> {
+  const now = Date.now();
+  if (existing) {
+    await db.transaction('rw', [db.orders], async () => {
+      await db.orders.put({
+        ...existing,
+        items: [...existing.items, ...order.items],
+        subtotal: existing.subtotal + order.subtotal,
+        total: existing.total + order.total,
+        cogs: existing.cogs + order.cogs,
+        guests: existing.guests + order.guests,
+        updatedAt: now,
+      });
+      await db.orders.delete(order.id);
+    });
+    return 'merged';
+  }
+  await db.orders.update(order.id, {
+    tableId: target.id,
+    tableName: target.name,
+    updatedAt: now,
+  });
+  return 'moved';
+}
+
 export function TablesPage() {
   const t = useT();
   const money = useMoney();
+  const now = useNow();
 
   const [areaId, setAreaId] = useState('all');
   const [managing, setManaging] = useState(false);
@@ -128,7 +155,7 @@ export function TablesPage() {
                     </div>
                     <div className="table-tile-meta mt-4">
                       {order
-                        ? formatDuration(Date.now() - order.createdAt, 'en')
+                        ? formatDuration(now - order.createdAt, 'en')
                         : `${table.seats} ${t('tab.seats')}`}
                     </div>
                     {order && <div className="num strong mt-4">{money(order.total)}</div>}
@@ -186,27 +213,9 @@ function MoveTableModal({
         cancelLabel: t('common.cancel'),
       });
       if (!ok) return;
-      await db.transaction('rw', [db.orders], async () => {
-        await db.orders.put({
-          ...existing,
-          items: [...existing.items, ...order.items],
-          subtotal: existing.subtotal + order.subtotal,
-          total: existing.total + order.total,
-          cogs: existing.cogs + order.cogs,
-          guests: existing.guests + order.guests,
-          updatedAt: Date.now(),
-        });
-        await db.orders.delete(order.id);
-      });
-      toast.success(t('tab.merged'));
-    } else {
-      await db.orders.update(order.id, {
-        tableId: target.id,
-        tableName: target.name,
-        updatedAt: Date.now(),
-      });
-      toast.success(t('tab.moved', { name: target.name }));
     }
+    const kind = await persistTableMove(order, target, existing);
+    toast.success(kind === 'merged' ? t('tab.merged') : t('tab.moved', { name: target.name }));
     onClose();
   };
 

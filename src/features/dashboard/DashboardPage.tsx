@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, EmptyState, Stat } from '@/components/ui';
 import { BarChart, HBarList } from '@/components/charts';
 import { Icon } from '@/components/Icon';
@@ -19,7 +19,8 @@ export function DashboardPage() {
   const seesProfit = useCan('viewReports');
   const seesStock = useCan('manageInventory');
 
-  const since = startOfDay(Date.now() - 7 * DAY);
+  const [now] = useState(() => Date.now());
+  const since = startOfDay(now - 7 * DAY);
   const orders = useLiveQuery(
     async () => db.orders.where('createdAt').aboveOrEqual(since).toArray(),
     [since],
@@ -32,8 +33,8 @@ export function DashboardPage() {
     [] as Order[],
   );
 
-  const today = rangeOf('today');
-  const yesterday = rangeOf('yesterday');
+  const today = rangeOf('today', now);
+  const yesterday = rangeOf('yesterday', now);
 
   const inRange = (list: Order[], from: number, to: number) =>
     list.filter((o) => {
@@ -49,7 +50,7 @@ export function DashboardPage() {
 
   const todaySummary = summarise(todayOrders);
   const yesterdaySummary = summarise(yesterdayOrders);
-  const series = useMemo(() => revenueByDay(orders, since, Date.now()), [orders, since]);
+  const series = useMemo(() => revenueByDay(orders, since, now), [orders, since, now]);
   const top = useMemo(() => productStats(todayOrders).slice(0, 5), [todayOrders]);
   const stock = useMemo(() => summariseStock(products), [products]);
 
@@ -63,7 +64,7 @@ export function DashboardPage() {
   );
 
   const backupAgeDays = settings.backup.lastAt
-    ? Math.floor((Date.now() - settings.backup.lastAt) / DAY)
+    ? Math.floor((now - settings.backup.lastAt) / DAY)
     : -1;
 
   return (

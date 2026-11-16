@@ -47,10 +47,8 @@ export function PosPage() {
   const [customOpen, setCustomOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // An emptied cart (sale finished, cleared) has nothing to show: back to the products.
-  useEffect(() => {
-    if (cart.items.length === 0) setCartOpen(false);
-  }, [cart.items.length]);
+  // カートが空になったらモバイルのドロワーは閉じた扱いにする。
+  const showMobileCart = cartOpen && cart.items.length > 0;
   const [view, setView] = useState<PosView>(loadView);
   const changeView = (v: PosView) => {
     setView(v);
@@ -113,7 +111,7 @@ export function PosPage() {
     if (cart.items.length === 0 && !cart.orderId) {
       useCart.getState().setType(settings.businessType === 'retail' ? 'retail' : 'dine_in');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 業態切り替え時のみ既定の注文種別を合わせる
   }, [settings.businessType]);
 
   const groupsFor = useCallback(
@@ -209,7 +207,7 @@ export function PosPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- F2/F4/F9ショートカット内で最新のハンドラ・状態を参照する
   }, [cart.items.length, user, settings, shift]);
 
   const visible = useMemo(() => {
@@ -223,10 +221,17 @@ export function PosPage() {
   return (
     <div className="pos">
       {stockAlert && (
-        <div className="stock-alert" role="alert" onClick={() => useUI.setState({ stockAlert: null })}>
+        <div className="stock-alert" role="alert">
           <Icon name="alert" size={20} />
           <span className="grow">{stockAlert}</span>
-          <Icon name="x" size={16} />
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-icon"
+            onClick={() => useUI.setState({ stockAlert: null })}
+            aria-label={t('common.close')}
+          >
+            <Icon name="x" size={16} />
+          </button>
         </div>
       )}
       <ProductGrid
@@ -253,7 +258,7 @@ export function PosPage() {
       />
 
       <CartPanel
-        open={cartOpen}
+        open={showMobileCart}
         onClose={() => setCartOpen(false)}
         totals={totals}
         onEditLine={setEditingLine}

@@ -288,7 +288,7 @@ export async function seedWorkspace(opts: SeedOptions): Promise<Settings> {
         active: true,
         color: PALETTE[p.cat % PALETTE.length],
         image: '',
-        modifierGroupIds: (p.mods ?? []).map((mi) => mods[mi]?.id).filter(Boolean) as string[],
+        modifierGroupIds: (p.mods ?? []).map((mi) => mods[mi]?.id).filter((id): id is string => Boolean(id)),
         favorite: !!p.fav,
         sort: i,
         createdAt: now,

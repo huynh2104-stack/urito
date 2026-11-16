@@ -126,7 +126,7 @@ function CategoryForm({
     >
       <div className="col gap-16">
         <Field label={t('common.name')} required>
-          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          <Input initialFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t('common.color')}>
           <ColorPicker value={color} onChange={setColor} colors={PALETTE} />

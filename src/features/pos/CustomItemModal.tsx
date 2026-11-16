@@ -60,7 +60,7 @@ export function CustomItemModal({ onClose }: { onClose: () => void }) {
     >
       <div className="col gap-12">
         <Field label={t('common.price')} required>
-          <MoneyInput value={price} onChange={setPrice} className="input-lg" autoFocus onEnter={add} />
+          <MoneyInput value={price} onChange={setPrice} className="input-lg" initialFocus onEnter={add} />
         </Field>
         <div className="grid grid-2">
           <Field label={t('common.name')}>

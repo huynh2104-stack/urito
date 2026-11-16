@@ -35,7 +35,7 @@ const movement = (over: Partial<StockMovement> = {}): StockMovement => ({
  *  selling during a power cut: same catalogue, one extra sale. */
 async function phoneSnapshotWithOneSale(): Promise<Snapshot> {
   const snap = await createSnapshot('test');
-  const clone: Snapshot = JSON.parse(JSON.stringify(snap));
+  const clone = JSON.parse(JSON.stringify(snap)) as Snapshot;
   clone.data.orders.push(
     order({ id: 'o-phone', code: 'HD-0001', customerId: 'c1', total: 24000, pointsEarned: 2, dueAmount: 4000 }),
   );

@@ -202,7 +202,7 @@ export function ProductForm({
           <div className="col gap-12 grow">
         <div className="grid grid-2">
           <Field label={t('common.name')} required>
-            <Input autoFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
+            <Input initialFocus value={draft.name} onChange={(e) => set('name', e.target.value)} />
           </Field>
           <Field label={t('common.category')}>
             <Select value={draft.categoryId} onChange={(e) => set('categoryId', e.target.value)}>

@@ -14,7 +14,7 @@ export function toCsv(rows: CsvCell[][]): string {
 /** Excel only reads UTF-8 CSV correctly when it starts with a BOM - without
  *  it Vietnamese and Japanese text opens as mojibake on a Windows machine. */
 export function downloadCsv(fileName: string, rows: CsvCell[][]): void {
-  const blob = new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + toCsv(rows)], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -27,7 +27,7 @@ export function downloadCsv(fileName: string, rows: CsvCell[][]): void {
 
 /** Small tolerant CSV reader: handles quotes, embedded commas and CRLF. */
 export function parseCsv(text: string): string[][] {
-  const clean = text.replace(/^﻿/, '');
+  const clean = text.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';

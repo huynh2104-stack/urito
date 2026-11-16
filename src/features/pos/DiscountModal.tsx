@@ -104,7 +104,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
 
         {type === 'percent' && (
           <Field label="%">
-            <NumberInput value={value} onChange={setValue} min={0} max={100} autoFocus />
+            <NumberInput value={value} onChange={setValue} min={0} max={100} initialFocus />
             <div className="row gap-4 mt-8">
               {[5, 10, 15, 20, 30, 50].map((p) => (
                 <Button key={p} size="sm" onClick={() => setValue(p)}>
@@ -117,7 +117,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
 
         {type === 'amount' && (
           <Field label={t('common.amount')}>
-            <MoneyInput value={value} onChange={setValue} autoFocus />
+            <MoneyInput value={value} onChange={setValue} initialFocus />
           </Field>
         )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Field, Input, Modal, MoneyInput } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { CURRENCIES } from '@/core/money';
@@ -46,11 +46,6 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
   const paidSoFar = entries.reduce((s, e) => s + e.amount, 0);
   const remaining = Math.max(0, totals.total - paidSoFar);
 
-  useEffect(() => {
-    setAmount(remaining);
-    setFresh(true);
-  }, [remaining]);
-
   const steps = CURRENCIES[settings.currency].quickCash;
   const decimals = CURRENCIES[settings.currency].decimals;
 
@@ -68,8 +63,12 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
 
   const addEntry = () => {
     if (amount <= 0) return;
-    setEntries([...entries, { method, amount, ref: reference.trim() }]);
+    const next = [...entries, { method, amount, ref: reference.trim() }];
+    const nextPaid = next.reduce((s, e) => s + e.amount, 0);
+    setEntries(next);
     setReference('');
+    setAmount(Math.max(0, totals.total - nextPaid));
+    setFresh(true);
   };
 
   const complete = async (allowDebt: boolean) => {
@@ -210,7 +209,13 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm btn-icon"
-                        onClick={() => setEntries(entries.filter((_, j) => j !== i))}
+                        onClick={() => {
+                          const next = entries.filter((_, j) => j !== i);
+                          const nextPaid = next.reduce((s, x) => s + x.amount, 0);
+                          setEntries(next);
+                          setAmount(Math.max(0, totals.total - nextPaid));
+                          setFresh(true);
+                        }}
                       >
                         <Icon name="x" size={12} />
                       </button>
@@ -246,7 +251,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
                 setFresh(false);
               }}
               className="input-lg"
-              autoFocus
+              initialFocus
             />
           </Field>
 

@@ -7,15 +7,18 @@ import { liveQuery } from 'dexie';
 export function useLiveQuery<T>(querier: () => Promise<T>, deps: unknown[], initial: T): T {
   const [value, setValue] = useState<T>(initial);
   const querierRef = useRef(querier);
-  querierRef.current = querier;
+
+  useEffect(() => {
+    querierRef.current = querier;
+  });
 
   useEffect(() => {
     const sub = liveQuery(() => querierRef.current()).subscribe({
-      next: (v) => setValue(v as T),
+      next: (v) => setValue(v),
       error: (err) => console.error('[urito] live query failed', err),
     });
     return () => sub.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 呼び出し元から渡される依存配列のみを監視する
   }, deps);
 
   return value;

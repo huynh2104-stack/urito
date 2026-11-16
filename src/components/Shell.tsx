@@ -228,7 +228,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
       </div>
 
-      {sidebarOpen && <div className="scrim" onClick={() => setSidebar(false)} />}
+      {sidebarOpen && <div className="scrim" role="presentation" onClick={() => setSidebar(false)} />}
     </div>
   );
 }

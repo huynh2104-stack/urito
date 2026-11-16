@@ -181,7 +181,7 @@ export function OrderDetail({
       >
         <p className="muted">{t('orders.voidConfirm', { code: order.code })}</p>
         <Field label={t('orders.voidReason')}>
-          <Input autoFocus value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
+          <Input initialFocus value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
         </Field>
       </Modal>
 
@@ -189,10 +189,9 @@ export function OrderDetail({
         <RefundModal
           order={order}
           onClose={() => setShowRefund(false)}
-          onDone={async () => {
+          onDone={() => {
             setShowRefund(false);
-            await reload();
-            onClose();
+            void reload().then(() => onClose());
           }}
         />
       )}

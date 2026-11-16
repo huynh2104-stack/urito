@@ -66,7 +66,7 @@ export function Icon({
   className,
   strokeWidth = 1.8,
 }: {
-  name: IconName | string;
+  name: IconName | (string & {});
   size?: number;
   className?: string;
   strokeWidth?: number;
