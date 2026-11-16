@@ -1,0 +1,6 @@
+{
+  "note": "C-05/C-08完了時に maxInitialJsGzipBytes を 143360 (140 KB) に引き下げる",
+  "maxInitialJsGzipBytes": 225280,
+  "maxCssGzipBytes": 20480,
+  "maxFontBytes": 307200
+}
