@@ -56,16 +56,36 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
               <span className="color-dot" style={{ background: c.color, width: 14, height: 14 }} />
               <span className="grow strong">{c.name}</span>
               {!c.active && <span className="badge">{t('common.inactive')}</span>}
-              <Button variant="ghost" size="sm" icon="arrowUp" disabled={i === 0} onClick={() => void move(c, -1)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="arrowUp"
+                aria-label={t('common.moveUp')}
+                disabled={i === 0}
+                onClick={() => void move(c, -1)}
+              />
               <Button
                 variant="ghost"
                 size="sm"
                 icon="arrowDown"
+                aria-label={t('common.moveDown')}
                 disabled={i === categories.length - 1}
                 onClick={() => void move(c, 1)}
               />
-              <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(c)} />
-              <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(c)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="edit"
+                aria-label={t('common.edit')}
+                onClick={() => setEditing(c)}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="trash"
+                aria-label={t('common.delete')}
+                onClick={() => void remove(c)}
+              />
             </div>
           ))
         )}

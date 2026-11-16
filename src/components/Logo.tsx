@@ -1,7 +1,6 @@
 import { useId } from 'react';
 
-/** The Urito mark: a "U" on a cobalt tile with the yellow highlighter stroke
- *  the receipt total gets. Inline SVG, so it costs no extra request. */
+/** Urito のロゴマーク（コバルト色タイルに「U」とレシート合計用の黄色ハイライト線・インラインSVG）。 */
 export function Logo({ size = 34, className = '' }: { size?: number; className?: string }) {
   const gid = useId().replace(/:/g, '');
   return (

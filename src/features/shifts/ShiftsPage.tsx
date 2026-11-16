@@ -146,6 +146,7 @@ export function ShiftsPage() {
                     size="sm"
                     variant="ghost"
                     icon="print"
+                    aria-label={t('shift.printReport')}
                     onClick={() => printDocument(<ShiftReceipt shift={shift} totals={totals} />)}
                   />
                 </div>

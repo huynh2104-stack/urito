@@ -33,6 +33,7 @@ export function RangePicker({
   return (
     <div className="row gap-8 wrap">
       <Select
+        aria-label={t('common.date')}
         value={preset}
         onChange={(e) => onPreset(e.target.value as RangePreset)}
         style={{ width: 165 }}
@@ -46,6 +47,7 @@ export function RangePicker({
       {preset === 'custom' && (
         <>
           <input
+            aria-label={t('common.from')}
             className="input"
             type="date"
             style={{ width: 155 }}
@@ -53,6 +55,7 @@ export function RangePicker({
             onChange={(e) => onRange({ ...range, from: fromDateInput(e.target.value) })}
           />
           <input
+            aria-label={t('common.to')}
             className="input"
             type="date"
             style={{ width: 155 }}

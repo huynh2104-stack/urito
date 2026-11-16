@@ -72,7 +72,14 @@ export function CartPanel({
             </span>
           </div>
           <div className="row gap-4">
-            <Button variant="ghost" size="sm" icon="trash" onClick={onClear} title={t('pos.clearCart')} />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="trash"
+              onClick={onClear}
+              title={t('pos.clearCart')}
+              aria-label={t('pos.clearCart')}
+            />
             <Button
               variant="ghost"
               size="sm"
@@ -80,6 +87,7 @@ export function CartPanel({
               className="mobile-only"
               onClick={onClose}
               title={t('common.close')}
+              aria-label={t('common.close')}
             />
           </div>
         </div>

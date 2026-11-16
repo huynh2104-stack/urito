@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Icon } from '@/components/Icon';
+import { isCommitEnter } from '@/components/ui';
 import { ProductThumb } from '@/components/ProductThumb';
 import { formatQty } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
@@ -10,9 +11,7 @@ import type { OrderItem, Product } from '@/db/types';
 const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const SWIPE_DELETE = 84;
 
-/** Quantity field that lets you clear it and type a new number. The cart only
- *  changes when the text is a valid quantity above zero; an empty or "0" draft
- *  is left alone until you leave the field, then it snaps back. */
+/** 一旦空にして数値を打ち直せる数量欄。0や空欄の入力中は確定せず、フォーカスアウト時に元の正数値へ戻す。 */
 function QtyInput({ item, setQty }: { item: OrderItem; setQty: (n: number) => void }) {
   const t = useT();
   const lang = useApp((s) => s.settings.lang);
@@ -40,7 +39,7 @@ function QtyInput({ item, setQty }: { item: OrderItem; setQty: (n: number) => vo
       }}
       onBlur={() => setDraft(null)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (isCommitEnter(e)) (e.target as HTMLInputElement).blur();
         if (e.key === 'Escape') {
           setDraft(null);
           (e.target as HTMLInputElement).blur();
@@ -58,7 +57,7 @@ export function CartLine({
 }: {
   item: OrderItem;
   product?: Product;
-  /** Units of this product already promised to parked tickets. */
+    /** 保留伝票ですでに引当確保されている数量。 */
   held: number;
   onEdit: (lineId: string) => void;
 }) {
@@ -70,8 +69,7 @@ export function CartLine({
   const drag = useRef<{ x: number; y: number; active: boolean } | null>(null);
   const timers = useRef<number[]>([]);
 
-  /* With "sell when out of stock" off, the cart may not exceed what is on the
-     shelf - whether the item came from a tile tap, the + button or typing. */
+      /* マイナス在庫禁止設定時は、タイルタップ・+ボタン・手入力いずれの場合も実在庫上限を超えないよう制限する。 */
   const negativeStock = useApp((s) => s.settings.negativeStock);
   const others = useCart((s) =>
     s.items.filter((i) => i.productId === item.productId && i.id !== item.id).reduce((n, i) => n + i.qty, 0),
@@ -99,7 +97,7 @@ export function CartLine({
     timers.current.push(window.setTimeout(() => useCart.getState().removeLine(item.id), 430));
   };
 
-  /* Touch: drag the row left; past the threshold it is deleted. */
+      /* タッチスワイプ操作: 左へしきい値以上スライドしたら明細を削除する。 */
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' || phase !== 'idle') return;
     drag.current = { x: e.clientX, y: e.clientY, active: false };

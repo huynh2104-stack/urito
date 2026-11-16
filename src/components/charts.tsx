@@ -1,8 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import type { SeriesPoint } from '@/services/reports';
 
-/* Hand-rolled SVG charts: no charting library, no extra 200 KB to download,
- * and they inherit the theme tokens so dark mode needs no extra work. */
+/* 自作の軽量 SVG チャート（外部チャートライブラリを同梱せず CSS テーマトークンでダークモードに自動追従する）。 */
 
 export function BarChart({
   data,

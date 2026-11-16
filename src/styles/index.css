@@ -1,11 +1,10 @@
 /* =========================================================================
-   Urito design system
-   Hand-written CSS with design tokens: no framework, ~15 KB, so the app
-   stays fast on the low-spec Windows machines it is meant to run on.
+   Urito デザインシステム
+   外部 CSS フレームワーク不使用・約 15 KB の軽量トークン設計（低スペック環境向け）
    ========================================================================= */
 
 :root {
-  /* neutrals */
+  /* ニュートラル色 */
   --c-bg: #f4f6f8;
   --c-surface: #ffffff;
   --c-surface-2: #fafbfc;
@@ -13,16 +12,16 @@
   --c-border: #dfe4ea;
   --c-border-strong: #c6cdd6;
   --c-text: #16202b;
-  --c-text-2: #52616f;
-  --c-text-3: #8593a1;
+  --c-text-2: #4a5764;
+  --c-text-3: #596673;
 
-  /* brand */
+  /* ブランド色 */
   --c-brand: #0d7d72;
   --c-brand-hover: #0a6a61;
   --c-brand-soft: #e2f4f1;
   --c-brand-text: #075e56;
 
-  /* semantic */
+  /* セマンティック色 */
   --c-success: #1a7f4b;
   --c-success-soft: #e3f5eb;
   --c-warn: #a56a07;
@@ -45,6 +44,9 @@
   --font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Yu Gothic UI", "Hiragino Sans",
     Meiryo, "Noto Sans JP", "Noto Sans", Roboto, Arial, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, "SF Mono", "Roboto Mono", monospace;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
 }
 
 :root[data-theme='dark'] {
@@ -56,7 +58,7 @@
   --c-border-strong: #3d4b5c;
   --c-text: #e9eef3;
   --c-text-2: #a4b2c0;
-  --c-text-3: #74848f;
+  --c-text-3: #8d9bb0;
 
   --c-brand: #2bb3a3;
   --c-brand-hover: #37c6b5;
@@ -338,7 +340,7 @@ a {
   flex-wrap: wrap;
 }
 
-.page-title { font-size: 20px; font-weight: 680; }
+.page-title { font-size: 20px; font-weight: var(--fw-bold); }
 .page-sub { color: var(--c-text-2); font-size: 13px; margin-top: 2px; }
 
 /* ------------------------------------------------------------------ card */
@@ -591,7 +593,7 @@ a {
 .stat-label { font-size: 12px; color: var(--c-text-2); font-weight: 600; }
 .stat-value {
   font-size: 22px;
-  font-weight: 680;
+  font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
   margin-top: 4px;
   line-height: 1.2;
@@ -622,6 +624,21 @@ a {
   flex-direction: column;
   overflow: hidden;
   animation: pop 0.13s ease-out;
+}
+
+/* E-07: ネイティブ top-layer <dialog> 用の基本スタイル */
+dialog.modal {
+  padding: 0;
+  border: 0;
+  margin: auto;
+  color: var(--c-text);
+  width: calc(100% - 32px);
+}
+dialog.modal:not([open]) { display: none; }
+dialog.modal:modal { overscroll-behavior: contain; }
+dialog.modal::backdrop {
+  background: rgba(13, 20, 28, 0.45);
+  overscroll-behavior: contain;
 }
 
 @keyframes pop {
@@ -701,7 +718,7 @@ a {
   color: var(--c-text-2);
 }
 .empty-icon { font-size: 34px; opacity: 0.5; }
-.empty-title { font-weight: 620; color: var(--c-text); }
+.empty-title { font-weight: var(--fw-semibold); color: var(--c-text); }
 
 /* ------------------------------------------------------------------- POS */
 
@@ -797,7 +814,7 @@ a {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.prod-price { font-size: 13.5px; font-weight: 680; color: var(--c-brand-text); font-variant-numeric: tabular-nums; }
+.prod-price { font-size: 13.5px; font-weight: var(--fw-bold); color: var(--c-brand-text); font-variant-numeric: tabular-nums; }
 .prod-stock { font-size: 11px; color: var(--c-text-3); }
 
 .pos-right {
@@ -980,7 +997,7 @@ a {
 }
 .choice:hover { border-color: var(--c-border-strong); }
 .choice.active { border-color: var(--c-brand); background: var(--c-brand-soft); }
-.choice-title { font-weight: 620; font-size: 14px; }
+.choice-title { font-weight: var(--fw-semibold); font-size: 14px; }
 .choice-desc { font-size: 12.5px; color: var(--c-text-2); }
 
 /* ---------------------------------------------------------------- misc */
@@ -1063,7 +1080,7 @@ a {
   background: transparent;
   color: var(--c-text-2);
   font-size: 13.5px;
-  font-weight: 570;
+  font-weight: var(--fw-semibold);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
@@ -1118,7 +1135,7 @@ a {
 
 @media print {
   body { background: #fff; }
-  .app-shell, .toast-stack, .overlay { display: none !important; }
+  .app-shell, .toast-stack, .overlay, dialog.modal { display: none !important; }
   #print-root { display: block !important; }
   @page { margin: 4mm; }
 }

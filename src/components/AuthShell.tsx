@@ -11,7 +11,7 @@ const FEATURES: { icon: IconName; title: TranslationKey; desc: TranslationKey }[
   { icon: 'lock', title: 'brand.f3', desc: 'brand.f3d' },
 ];
 
-/** Split-screen frame shared by first-run setup and sign-in. */
+/** 初回セットアップ画面とログイン画面で共有する2分割レイアウト枠。 */
 export function AuthShell({ children }: { children: ReactNode }) {
   const t = useT();
   return (

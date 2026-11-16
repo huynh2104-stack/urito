@@ -1,6 +1,9 @@
 import {
+  createContext,
+  useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -15,6 +18,7 @@ import { Icon, type IconName } from './Icon';
 import { formatAmount, parseMoney } from '@/core/money';
 import { useApp, useT } from '@/store/app';
 import { useUI } from '@/store/ui';
+import type { CurrencyCode } from '@/db/types';
 
 /* ---------------------------------------------------------------- button */
 
@@ -45,15 +49,24 @@ export function Button({
   ]
     .filter(Boolean)
     .join(' ');
+  const labelProps =
+    !children && rest.title && !rest['aria-label'] ? { 'aria-label': rest.title } : undefined;
   return (
-    <button type="button" className={classes} {...rest}>
+    <button type="button" className={classes} {...labelProps} {...rest}>
       {icon && <Icon name={icon} size={size === 'sm' ? 14 : 16} />}
       {children}
     </button>
   );
 }
 
+/** IME 変換確定の Enter と送信 Enter を区別するヘルパー。 */
+export function isCommitEnter(e: React.KeyboardEvent): boolean {
+  return e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229;
+}
+
 /* ----------------------------------------------------------------- field */
+
+const FieldIdContext = createContext<string | undefined>(undefined);
 
 export function Field({
   label,
@@ -68,15 +81,16 @@ export function Field({
   required?: boolean;
   children: ReactNode;
 }) {
+  const autoId = useId();
   return (
     <div className="field">
       {label && (
-        <label className="label">
+        <label className="label" htmlFor={autoId}>
           {label}
           {required && <span className="text-danger"> *</span>}
         </label>
       )}
-      {children}
+      <FieldIdContext.Provider value={autoId}>{children}</FieldIdContext.Provider>
       {error ? <span className="error-text">{error}</span> : hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
@@ -91,24 +105,29 @@ function useInitialFocus(ref: RefObject<HTMLInputElement | null>, enabled?: bool
 export function Input({
   className = '',
   initialFocus,
+  id,
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & { initialFocus?: boolean }) {
+  const fieldId = useContext(FieldIdContext);
   const ref = useRef<HTMLInputElement>(null);
   useInitialFocus(ref, initialFocus);
-  return <input ref={ref} className={`input ${className}`} {...rest} />;
+  return <input ref={ref} id={id ?? fieldId} className={`input ${className}`} {...rest} />;
 }
 
-export function Textarea({ className = '', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={`textarea ${className}`} {...rest} />;
+export function Textarea({ className = '', id, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const fieldId = useContext(FieldIdContext);
+  return <textarea id={id ?? fieldId} className={`textarea ${className}`} {...rest} />;
 }
 
 export function Select({
   className = '',
+  id,
   children,
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
+  const fieldId = useContext(FieldIdContext);
   return (
-    <select className={`select ${className}`} {...rest}>
+    <select id={id ?? fieldId} className={`select ${className}`} {...rest}>
       {children}
     </select>
   );
@@ -152,7 +171,7 @@ export function SwitchRow({
   return (
     <div className="switch-row">
       <div>
-        <div style={{ fontWeight: 550 }}>{label}</div>
+        <div style={{ fontWeight: 600 }}>{label}</div>
         {hint && <div className="hint">{hint}</div>}
       </div>
       <button
@@ -172,6 +191,7 @@ export function SwitchRow({
 export function MoneyInput({
   value,
   onChange,
+  currency: currencyOverride,
   className = '',
   initialFocus,
   onEnter,
@@ -181,6 +201,7 @@ export function MoneyInput({
 }: {
   value: number;
   onChange: (v: number) => void;
+  currency?: CurrencyCode;
   className?: string;
   initialFocus?: boolean;
   onEnter?: () => void;
@@ -188,7 +209,9 @@ export function MoneyInput({
   disabled?: boolean;
   placeholder?: string;
 }) {
-  const currency = useApp((s) => s.settings.currency);
+  const fieldId = useContext(FieldIdContext);
+  const shopCurrency = useApp((s) => s.settings.currency);
+  const currency = currencyOverride ?? shopCurrency;
   const lang = useApp((s) => s.settings.lang);
   const ref = useRef<HTMLInputElement>(null);
   useInitialFocus(ref, initialFocus);
@@ -207,7 +230,7 @@ export function MoneyInput({
   return (
     <input
       ref={ref}
-      id={id}
+      id={id ?? fieldId}
       className={`input input-money ${className}`}
       inputMode="numeric"
       value={displayValue}
@@ -223,7 +246,7 @@ export function MoneyInput({
       }}
       onChange={handle}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && onEnter) onEnter();
+        if (isCommitEnter(e) && onEnter) onEnter();
       }}
     />
   );
@@ -237,6 +260,7 @@ export function NumberInput({
   step = 1,
   className = '',
   initialFocus,
+  id,
   ...rest
 }: {
   value: number;
@@ -247,11 +271,13 @@ export function NumberInput({
   className?: string;
   initialFocus?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'min' | 'max' | 'step'>) {
+  const fieldId = useContext(FieldIdContext);
   const ref = useRef<HTMLInputElement>(null);
   useInitialFocus(ref, initialFocus);
   return (
     <input
       ref={ref}
+      id={id ?? fieldId}
       type="number"
       className={`input ${className}`}
       value={Number.isFinite(value) ? value : 0}
@@ -281,6 +307,88 @@ export function Badge({
 
 /* ----------------------------------------------------------------- modal */
 
+function isOutsideRect(el: HTMLElement, x: number, y: number): boolean {
+  const r = el.getBoundingClientRect();
+  return x < r.left || x > r.right || y < r.top || y > r.bottom;
+}
+
+function ModalDialog({
+  onClose,
+  title,
+  size,
+  footer,
+  children,
+  closeOnOverlay,
+}: {
+  onClose: () => void;
+  title: ReactNode;
+  size?: 'sm' | 'lg' | 'xl';
+  footer?: ReactNode;
+  children: ReactNode;
+  closeOnOverlay: boolean;
+}) {
+  const t = useT();
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const unmountingRef = useRef(false);
+  const outsideDownRef = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!el.open) {
+      if (typeof el.showModal === 'function') el.showModal();
+      else el.setAttribute('open', '');
+    }
+    return () => {
+      unmountingRef.current = true;
+      if (el.open && typeof el.close === 'function') el.close();
+      if (prevFocus?.isConnected && (!document.activeElement || document.activeElement === document.body)) {
+        prevFocus.focus();
+      }
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className={`modal ${size ? `modal-${size}` : ''}`}
+      aria-labelledby={titleId}
+      {...({ closedby: closeOnOverlay ? 'any' : 'closerequest' } as Record<string, string>)}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onClose={() => {
+        if (!unmountingRef.current) onClose();
+      }}
+      onPointerDown={(e) => {
+        if (!closeOnOverlay || 'closedBy' in e.currentTarget) return;
+        outsideDownRef.current =
+          e.target === e.currentTarget && isOutsideRect(e.currentTarget, e.clientX, e.clientY);
+      }}
+      onPointerUp={(e) => {
+        if (!closeOnOverlay || 'closedBy' in e.currentTarget || !outsideDownRef.current) return;
+        outsideDownRef.current = false;
+        if (e.target === e.currentTarget && isOutsideRect(e.currentTarget, e.clientX, e.clientY)) {
+          onClose();
+        }
+      }}
+    >
+      <div className="sheet-handle" aria-hidden="true" />
+      <div className="modal-head">
+        <div id={titleId} className="modal-title">
+          {title}
+        </div>
+        <Button variant="ghost" size="sm" icon="x" onClick={onClose} aria-label={t('common.close')} />
+      </div>
+      <div className="modal-body">{children}</div>
+      {footer && <div className="modal-foot">{footer}</div>}
+    </dialog>
+  );
+}
+
 export function Modal({
   open,
   onClose,
@@ -298,35 +406,17 @@ export function Modal({
   children: ReactNode;
   closeOnOverlay?: boolean;
 }) {
-  const t = useT();
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
   if (!open) return null;
   return createPortal(
-    <div
-      className="overlay"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (closeOnOverlay && e.target === e.currentTarget) onClose();
-      }}
+    <ModalDialog
+      onClose={onClose}
+      title={title}
+      size={size}
+      footer={footer}
+      closeOnOverlay={closeOnOverlay}
     >
-      <div className={`modal ${size ? `modal-${size}` : ''}`} role="dialog" aria-modal="true">
-        <div className="sheet-handle" aria-hidden="true" />
-        <div className="modal-head">
-          <div className="modal-title">{title}</div>
-          <Button variant="ghost" size="sm" icon="x" onClick={onClose} aria-label={t('common.close')} />
-        </div>
-        <div className="modal-body">{children}</div>
-        {footer && <div className="modal-foot">{footer}</div>}
-      </div>
-    </div>,
+      {children}
+    </ModalDialog>,
     document.body,
   );
 }
@@ -394,6 +484,7 @@ export function SearchInput({
   value,
   onChange,
   placeholder,
+  ariaLabel,
   initialFocus,
   inputRef,
   onKeyDown,
@@ -401,16 +492,18 @@ export function SearchInput({
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  ariaLabel?: string;
   initialFocus?: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
+  const t = useT();
   const localRef = useRef<HTMLInputElement>(null);
   const targetRef = inputRef ?? localRef;
   useInitialFocus(targetRef, initialFocus);
   return (
     <div className="search-wrap">
-      <span className="search-icon">
+      <span className="search-icon" aria-hidden="true">
         <Icon name="search" size={15} />
       </span>
       <input
@@ -418,6 +511,7 @@ export function SearchInput({
         className="input"
         value={value}
         placeholder={placeholder}
+        aria-label={ariaLabel ?? placeholder ?? t('common.search')}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
       />
@@ -606,7 +700,7 @@ function PromptModalBody({
             placeholder={placeholder}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') onSubmit(value.trim());
+              if (isCommitEnter(e)) onSubmit(value.trim());
             }}
           />
         )}

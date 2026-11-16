@@ -338,6 +338,7 @@ function PurchaseForm({
                           variant="ghost"
                           size="sm"
                           icon="trash"
+                          aria-label={t('common.delete')}
                           onClick={() => setItems(items.filter((_, j) => j !== i))}
                         />
                       </td>

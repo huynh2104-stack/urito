@@ -148,7 +148,13 @@ export function CustomersPage() {
                       {c.debt > 0 ? money(c.debt) : '—'}
                     </td>
                     <td className="right" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(c)} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="edit"
+                        aria-label={t('common.edit')}
+                        onClick={() => setEditing(c)}
+                      />
                     </td>
                   </tr>
                 ))}

@@ -1,5 +1,4 @@
-/* Thermal-printer receipt. Sized in millimetres so an 58 mm or 80 mm roll
-   comes out right, and kept monochrome so cheap printers render it cleanly. */
+/* サーマルプリンタ用レシート定義（58mm / 80mm 幅にミリ単位で合わせ、モノクロ印刷に適した配色に統一）。 */
 
 .receipt {
   --w: 72mm;

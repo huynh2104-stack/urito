@@ -15,7 +15,7 @@ export const DEFAULT_VIEW: PosView = { sort: 'pin', inStockOnly: false, size: 'm
 const KEY = 'urito.pos.view';
 const SORTS: SortKey[] = ['pin', 'name', 'priceAsc', 'priceDesc', 'sold', 'stock', 'newest'];
 
-/** Remembered per device: a shop PC and a phone want different layouts. */
+/** レイアウト設定を端末ごとに保存する（店舗PCとモバイルで好みが異なるため）。 */
 export function loadView(): PosView {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<PosView> | null;
@@ -34,7 +34,7 @@ export function saveView(view: PosView) {
   try {
     localStorage.setItem(KEY, JSON.stringify(view));
   } catch {
-    /* private mode: the view simply is not remembered */
+        /* プライベートブラウズ等で保存不可の場合はそのまま無視する */
   }
 }
 
@@ -63,7 +63,7 @@ export function arrangeProducts(
     case 'sold':
       return copy.sort((a, b) => (sold.get(b.id) ?? 0) - (sold.get(a.id) ?? 0) || byManual(a, b, lang));
     case 'stock':
-      // Items that do not track stock go last: they cannot run out.
+      // 在庫管理しない商品は在庫切れにならないため在庫少ない順では末尾へ回す
       return copy.sort(
         (a, b) =>
           (a.trackStock && !a.isService ? a.stock : Infinity) - (b.trackStock && !b.isService ? b.stock : Infinity) ||

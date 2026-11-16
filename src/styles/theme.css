@@ -1,11 +1,7 @@
 /* =========================================================================
-   Urito identity v0.4 - "cobalt & receipt paper"
-
-   A calm cool-grey page, white surfaces with soft layered shadows, a deep
-   navy navigation rail and one confident cobalt. The receipt slip and the
-   yellow highlighter on the total stay as the signature. Everything is
-   plain CSS: no blur filters, no heavy gradients, so a weak shop PC keeps
-   its frame rate. Loaded last: index.css -> app.css -> theme.css.
+   Urito デザイン v0.4「コバルト＆レシート用紙」
+   低負荷を保つため blur フィルタや重いグラデーションを使わず純粋 CSS のみで構成。
+   読込順の最後に配置: index.css -> app.css -> theme.css
    ========================================================================= */
 
 :root {
@@ -32,8 +28,8 @@
   --c-border: var(--rule);
   --c-border-strong: var(--rule-strong);
   --c-text: var(--text);
-  --c-text-2: #4a5570;
-  --c-text-3: #7b86a1;
+  --c-text-2: #434e68;
+  --c-text-3: #596480;
 
   --c-brand: var(--ink);
   --c-brand-hover: var(--ink-deep);
@@ -81,7 +77,7 @@
   --c-surface-2: #17213c;
   --c-surface-3: #1c2848;
   --c-text-2: #a7b2cc;
-  --c-text-3: #74809c;
+  --c-text-3: #8d99b5;
   --c-success: #5cc486;
   --c-success-soft: #123020;
   --c-warn: #e0b04c;
@@ -119,7 +115,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 
 .page-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
 .page-sub { font-size: 13.5px; color: var(--c-text-2); margin-top: 3px; }
-.card-title { font-size: 15px; font-weight: 680; }
+.card-title { font-size: 15px; font-weight: var(--fw-bold); }
 
 .table th,
 .stat-label,
@@ -355,7 +351,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 
 .grid { gap: 16px; }
 
-/* Figures: four cards, each with a tinted icon chip. */
+/* 数値カード: アイコン背景付きの 4 枚構成 */
 .stat {
   position: relative;
   background: var(--c-surface);
@@ -381,7 +377,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .stat-icon.danger { background: var(--c-danger-soft); color: var(--c-danger); }
 
 .stat-label { font-size: 13px; font-weight: 500; color: var(--c-text-2); }
-.stat-value { font-size: 26px; font-weight: 760; margin-top: 8px; letter-spacing: -0.025em; line-height: 1.15; }
+.stat-value { font-size: 26px; font-weight: var(--fw-bold); margin-top: 8px; letter-spacing: -0.025em; line-height: 1.15; }
 .stat-delta {
   font-size: 12.5px;
   font-weight: 600;
@@ -390,7 +386,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   align-items: center;
   gap: 4px;
 }
-.stat-delta .dim { font-weight: 450; }
+.stat-delta .dim { font-weight: 400; }
 
 /* ---------------------------------------------------------------- controls */
 
@@ -465,7 +461,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .chip {
   border-radius: 999px;
   border-color: var(--rule-strong);
-  font-weight: 560;
+  font-weight: var(--fw-medium);
   font-size: 13.5px;
   padding: 6px 14px;
   background: var(--c-surface);
@@ -484,7 +480,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .checkbox input { accent-color: var(--ink); }
 
 .tabs { border-bottom-color: var(--rule); gap: 4px; }
-.tab { font-size: 14px; font-weight: 580; padding: 10px 16px; }
+.tab { font-size: 14px; font-weight: var(--fw-semibold); padding: 10px 16px; }
 .tab.active { color: var(--ink-deep); border-bottom: 2px solid var(--ink); }
 :root[data-theme='dark'] .tab.active { color: var(--ink); }
 
@@ -500,7 +496,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .table tbody tr:hover { background: var(--c-surface-2); }
 
 .badge {
-  font-weight: 620;
+  font-weight: var(--fw-semibold);
   font-size: 12px;
   border-radius: 999px;
   padding: 3px 10px;
@@ -536,13 +532,17 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   margin-bottom: 8px;
   box-shadow: 0 0 0 8px color-mix(in srgb, var(--ink-wash) 45%, transparent);
 }
-.empty-title { font-weight: 680; font-size: 15px; }
+.empty-title { font-weight: var(--fw-semibold); font-size: 15px; }
 
 /* ------------------------------------------------------------- dialogs */
 
 .overlay {
   background: rgba(8, 13, 36, 0.52);
   padding: 20px;
+}
+
+dialog.modal::backdrop {
+  background: rgba(8, 13, 36, 0.52);
 }
 
 .modal {
@@ -556,7 +556,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   padding: 18px 22px 14px;
   border-bottom: 1px solid var(--rule);
 }
-.modal-title { font-size: 17.5px; font-weight: 720; }
+.modal-title { font-size: 17.5px; font-weight: var(--fw-bold); }
 .modal-body { padding: 20px 22px; }
 .modal-foot {
   background: var(--c-surface-2);
@@ -571,7 +571,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   border: 1px solid var(--rule);
   border-left-width: 4px;
   box-shadow: var(--shadow-2);
-  font-weight: 520;
+  font-weight: var(--fw-medium);
   padding: 12px 14px;
 }
 .toast-success { border-left-color: var(--c-success); }
@@ -607,7 +607,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .prod-stock-pill { border-radius: 999px; font-weight: 600; }
 .prod-stock-pill.danger { background: var(--stamp); }
 
-/* Product tag: a tinted monogram, the name, and the price where the eye lands. */
+/* 商品タグ表示: モノグラム・商品名・視線の集まる価格表示 */
 .prod-tag {
   position: relative;
   display: flex;
@@ -669,8 +669,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .prod-tag .prod-stock-pill.danger { background: var(--stamp); color: #fff; }
 
 /* ------------------------------------------------------ the receipt slip */
-/* The order is a slip of thermal paper torn off the printer: saw-tooth top,
-   dotted rules between lines, the total marked with a highlighter. */
+/* 伝票エリア: サーマル紙をイメージしたギザギザ上端・破線罫線・合計蛍光ペン表示 */
 
 .pos-right {
   background: #e7ebf6;
@@ -717,7 +716,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   justify-content: space-between;
   gap: 8px;
 }
-.slip-title strong { font-size: 16px; font-weight: 720; }
+.slip-title strong { font-size: 16px; font-weight: var(--fw-bold); }
 .slip-meta { font-size: 12.5px; color: var(--c-text-3); font-variant-numeric: tabular-nums; }
 
 .cart-line {
@@ -794,7 +793,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .paid-total { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
 
 /* -------------------------------------------------------- sign-in / setup */
-/* Split screen: a navy brand panel on the left, the form on the right. */
+/* 2分割レイアウト: 左にネイビーのブランドパネル、右にフォーム */
 
 .auth {
   display: grid;
@@ -830,11 +829,11 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 }
 .auth-brand > * { position: relative; }
 
-.auth-wordmark { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 780; letter-spacing: -0.02em; }
+.auth-wordmark { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: var(--fw-bold); letter-spacing: -0.02em; }
 
 .auth-headline {
   font-size: clamp(28px, 3.2vw, 40px);
-  font-weight: 780;
+  font-weight: var(--fw-bold);
   line-height: 1.12;
   letter-spacing: -0.03em;
   margin: 0 0 28px;
@@ -859,7 +858,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: var(--accent);
 }
-.auth-feature-title { font-weight: 680; font-size: 15px; }
+.auth-feature-title { font-weight: var(--fw-bold); font-size: 15px; }
 .auth-feature-desc { font-size: 13.5px; color: rgba(226, 232, 255, 0.72); margin-top: 2px; max-width: 30em; }
 .auth-foot { font-size: 12.5px; color: rgba(226, 232, 255, 0.55); }
 
@@ -879,7 +878,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   box-shadow: var(--shadow-card), 0 30px 70px -40px rgba(16, 24, 64, 0.3);
   padding: 32px;
 }
-.onboard-card h1 { font-size: 23px; font-weight: 760; letter-spacing: -0.02em; }
+.onboard-card h1 { font-size: 23px; font-weight: var(--fw-bold); letter-spacing: -0.02em; }
 
 .auth-steps { display: flex; gap: 6px; margin-bottom: 22px; }
 .auth-steps span { height: 5px; flex: 1; border-radius: 3px; background: var(--c-surface-3); transition: background 0.2s; }
@@ -960,8 +959,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   .onboard-card { padding: 22px 18px; border-radius: 16px; }
   .auth-main { padding: 20px 14px 28px; align-items: start; }
 
-  /* Bottom sheet that rides above the on-screen keyboard: --kb is the
-     keyboard height measured from visualViewport (see lib/keyboard.ts). */
+  /* オンスクリーンキーボード高（--kb: lib/keyboard.ts で計測）を避けて下部シートを持ち上げる */
   .overlay {
     align-items: flex-end;
     padding: 0;
@@ -980,6 +978,15 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
     max-height: calc(100dvh - var(--kb) - 16px);
   }
 
+  dialog.modal,
+  dialog.modal-sm,
+  dialog.modal-lg,
+  dialog.modal-xl {
+    width: 100%;
+    margin: auto 0 var(--kb, 0px) 0;
+    transition: margin-bottom 0.12s ease-out;
+  }
+
   .sheet-handle {
     display: block;
     width: 40px;
@@ -993,7 +1000,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   .modal-head { padding: 10px 16px 12px; }
   .modal-body { padding: 14px 16px; }
 
-  /* Primary action spans the width - it is what the thumb is looking for. */
+  /* 主要アクションボタンは親指で押しやすい全幅配置 */
   .modal-foot {
     flex-wrap: wrap;
     padding: 10px 16px calc(10px + var(--safe-b));
@@ -1004,23 +1011,35 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   .modal-foot > .btn-primary,
   .modal-foot > .btn-danger { flex: 1 1 100%; order: 10; padding: 13px; font-size: 15.5px; }
 
-  /* When the keyboard is up there is little room: drop the safe-area pad. */
+  /* キーボード展開時は表示領域確保のため下部 safe-area 余白を詰める */
   :root.kb-open .modal-foot { padding-bottom: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .stamp { animation: none; }
-  .modal, .toast, .menu-pop, .page { animation: none; }
-  .prod-tag, .prod-tile, .btn { transition: none; }
+  .modal, dialog.modal, .toast, .menu-pop, .page, .stock-alert, .prod-incart { animation: none; }
+  .prod-tag, .prod-tile, .btn, dialog.modal { transition: none; }
+}
+
+@media (pointer: coarse) {
+  .icon-btn,
+  .btn-icon,
+  .pin-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .swatch {
+    width: 44px;
+    height: 44px;
+    padding: 8px;
+    background-clip: content-box;
+  }
 }
 
 /* ================================================================ v0.5 ==
-   Sales-screen upgrade: cart lines with pictures, swipe/slide delete,
-   fly-to-cart, view menu, accumulating cash buttons.
-   ======================================================================== */
+   レジ画面改善: 商品画像付き明細・スワイプ削除・カート飛行アニメ・表示メニュー */
 
-/* The menu button belongs to the phone layout only. On desktop the sidebar is
-   always visible, so a visible button just dimmed the page for nothing. */
+/* ハンバーガーボタンはモバイル専用（PCではサイドバーが常時表示） */
 .icon-btn.mobile-only { display: none; }
 .scrim { display: none; }
 @media (max-width: 960px) {
@@ -1213,8 +1232,9 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
 .prod-tag.in-cart, .prod-tile.in-cart { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow-1); }
 .prod-incart {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
   min-width: 24px;
   height: 24px;
   padding: 0 6px;
@@ -1272,10 +1292,10 @@ h1, h2, h3, .page-title, .card-title, .modal-title { letter-spacing: -0.012em; }
   .cart-line { padding: 12px 14px; }
 }
 
-/* Long codes (several barcodes in one field) must never widen a tile. */
+/* 長いバーコード文字列でもタイル幅が膨らまないよう幅制約と省略表示を行う */
 .prod-tag, .prod-tile, .prod-info { min-width: 0; }
 .prod-sku { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grid-sentinel { grid-column: 1 / -1; height: 1px; }
 
-/* The alert must stay above the phone cart sheet, or it is never seen. */
+/* 在庫警告はモバイルカートシートより前面に表示する */
 .stock-alert { position: fixed; z-index: 150; top: 72px; }

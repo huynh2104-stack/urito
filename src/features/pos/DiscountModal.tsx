@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field, Input, Modal, MoneyInput, NumberInput } from '@/components/ui';
+import { Button, Field, Input, Modal, MoneyInput, NumberInput, isCommitEnter } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { useMoney, useT } from '@/store/app';
@@ -135,7 +135,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
                 placeholder={t('promo.code')}
                 onChange={(e) => setCode(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') applyCode();
+                  if (isCommitEnter(e)) applyCode();
                 }}
               />
               <Button onClick={applyCode}>{t('common.apply')}</Button>

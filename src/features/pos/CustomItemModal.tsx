@@ -5,8 +5,7 @@ import { useMoney, useT } from '@/store/app';
 import { useCart } from '@/store/cart';
 import type { Product } from '@/db/types';
 
-/** Sell something that is not in the catalogue yet - a loose item, a one-off
- *  service - without stopping the queue to create a product first. */
+/** 商品マスタ未登録の単品や臨時のサービスを、登録作業で会計を止めずに即座に販売するモーダル。 */
 export function CustomItemModal({ onClose }: { onClose: () => void }) {
   const t = useT();
   const money = useMoney();

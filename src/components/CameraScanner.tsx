@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Input, Modal } from './ui';
+import { Button, Input, Modal, isCommitEnter } from './ui';
 import { useT } from '@/store/app';
 
 interface DetectedBarcode {
@@ -18,9 +18,8 @@ export function isCameraScanSupported(): boolean {
   return typeof window !== 'undefined' && !!window.BarcodeDetector && !!navigator.mediaDevices?.getUserMedia;
 }
 
-/** Scan with the phone camera, so a shop without a USB scanner can still sell
- *  by barcode. Uses the browser's built-in BarcodeDetector (Chrome on Android);
- *  where that is missing, the cashier can type the code instead. */
+/** 端末カメラでバーコードを読み取り、USB スキャナがない環境でも会計できるモーダル。
+ *  ブラウザ標準の BarcodeDetector を利用し、非対応ブラウザでは手入力に切り替える。 */
 export function CameraScanner({ onDetect, onClose }: { onDetect: (code: string) => void; onClose: () => void }) {
   const t = useT();
   const video = useRef<HTMLVideoElement>(null);
@@ -56,7 +55,7 @@ export function CameraScanner({ onDetect, onClose }: { onDetect: (code: string) 
               return;
             }
           } catch {
-            /* a frame that is not ready yet */
+            /* フレーム未準備時は無視して次フレームで再試行する */
           }
           timer = window.setTimeout(() => void tick(), 220);
         };
@@ -91,7 +90,7 @@ export function CameraScanner({ onDetect, onClose }: { onDetect: (code: string) 
             placeholder={t('products.barcode')}
             onChange={(e) => setManual(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && manual.trim()) onDetect(manual.trim());
+              if (isCommitEnter(e) && manual.trim()) onDetect(manual.trim());
             }}
           />
           <Button variant="primary" disabled={!manual.trim()} onClick={() => onDetect(manual.trim())}>

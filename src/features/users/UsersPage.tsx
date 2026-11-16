@@ -98,8 +98,20 @@ export function UsersPage() {
               </div>
               <span className="badge">{t(ROLE_KEY[user.role])}</span>
               {hasPin(user) && <span className="badge badge-info">PIN</span>}
-              <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(user)} />
-              <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(user)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="edit"
+                aria-label={t('common.edit')}
+                onClick={() => setEditing(user)}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="trash"
+                aria-label={t('common.delete')}
+                onClick={() => void remove(user)}
+              />
             </div>
           ))
         )}
@@ -165,7 +177,7 @@ function UserForm({ user, onClose }: { user: User | null; onClose: () => void })
     await reloadUsers();
     if (current?.id === row.id) {
       await setUser(row.active ? row : null);
-      // A demoted user must not be left on a page they can no longer open.
+            // 降格されたユーザーが開覧権限のない画面に留まらないようトップへ戻す
       if (row.role !== 'owner') window.location.hash = '#/';
     }
     toast.success(t('common.saved'));

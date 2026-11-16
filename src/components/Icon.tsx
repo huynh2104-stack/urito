@@ -1,5 +1,4 @@
-/** A tiny stroke-icon set (Feather-style paths) so the app ships no icon font
- *  and no extra network request. */
+/** アイコンフォントや外部リクエスト不要で描画する軽量インライン SVG アイコン集。 */
 const PATHS: Record<string, string> = {
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   pos: 'M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',

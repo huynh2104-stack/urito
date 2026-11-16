@@ -20,7 +20,7 @@ const SIZES: { key: TileSize; label: TranslationKey }[] = [
   { key: 'l', label: 'pos.sizeL' },
 ];
 
-/** Sort / filter / tile-size popover for the sales grid. */
+/** 商品グリッドの並び替え・在庫フィルタ・タイルサイズ切替ポップオーバー。 */
 export function ViewMenu({ view, onChange }: { view: PosView; onChange: (v: PosView) => void }) {
   const t = useT();
   const [open, setOpen] = useState(false);

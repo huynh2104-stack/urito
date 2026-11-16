@@ -1,6 +1,6 @@
 import { code128Bars } from '@/lib/barcode';
 
-/** Crisp SVG barcode: scales to any label size and prints sharply on thermal printers. */
+/** 鮮明な SVG バーコード表示。あらゆるラベル寸法に拡縮でき、サーマルプリンタでも鮮明に印字される。 */
 export function Barcode({
   value,
   height = 40,

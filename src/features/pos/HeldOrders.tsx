@@ -77,7 +77,13 @@ export function HeldOrdersModal({ onClose }: { onClose: () => void }) {
               <Button size="sm" variant="primary" onClick={() => resume(order)}>
                 {t('pos.resume')}
               </Button>
-              <Button size="sm" variant="ghost" icon="trash" onClick={() => void remove(order)} />
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="trash"
+                aria-label={t('common.delete')}
+                onClick={() => void remove(order)}
+              />
             </div>
           ))}
         </div>

@@ -152,8 +152,20 @@ export function ExpensesPage() {
                     <td className="dim">{e.userName}</td>
                     <td className="right num strong">{money(e.amount)}</td>
                     <td className="right">
-                      <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(e)} />
-                      <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(e)} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="edit"
+                        aria-label={t('common.edit')}
+                        onClick={() => setEditing(e)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="trash"
+                        aria-label={t('common.delete')}
+                        onClick={() => void remove(e)}
+                      />
                     </td>
                   </tr>
                 ))}

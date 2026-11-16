@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type RefObject } from 'react';
-import { Button, EmptyState, SearchInput } from '@/components/ui';
+import { Button, EmptyState, SearchInput, isCommitEnter } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { monogram, tint } from '@/components/ProductThumb';
 import { useThumb } from '@/lib/thumbCache';
@@ -50,19 +50,17 @@ export function ProductGrid({
   onOpenCart: () => void;
   view: PosView;
   onView: (v: PosView) => void;
-  /** Units of each product in the current cart, and held by parked tickets. */
+  /** 現在のカート投入数と保留伝票引当数を保持する。 */
   reserved: Map<string, number>;
 }) {
   const t = useT();
   const money = useMoney();
   const sorted = [...categories].filter((c) => c.active).sort((a, b) => a.sort - b.sort);
-  // Photos only earn their space when the shop has taken some; until then each
-  // product is a price tag, which is what a cashier actually scans for.
+  // 商品画像が1件でも登録されている店舗のみ写真付きグリッドを表示し、未登録店舗では価格タグ表示で視認性を高める
   const withImages = products.some((p) => (p.imageRev ?? 0) > 0 || Boolean(p.image));
   const lang = useApp((st) => st.settings.lang);
 
-  // A shop can have hundreds of products with photos. Draw them in pages as the
-  // cashier scrolls: far fewer DOM nodes and image downloads on a weak phone.
+  // 商品数が多い場合もスクロールに応じて段階的に描画し、DOM ノード数と画像デコード負荷を抑える
   const PAGE = 48;
   const filterKey = `${categoryId}|${search}|${view.sort}|${String(view.inStockOnly)}`;
   const [paging, setPaging] = useState({ key: filterKey, count: PAGE });
@@ -93,10 +91,16 @@ export function ProductGrid({
           placeholder={t('pos.searchProduct')}
           inputRef={searchRef}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') onSubmitSearch();
+            if (isCommitEnter(e)) onSubmitSearch();
           }}
         />
-        <Button icon="scan" onClick={onScan} title={t('scan.title')} className="scan-btn" />
+        <Button
+          icon="scan"
+          onClick={onScan}
+          title={t('scan.title')}
+          aria-label={t('scan.title')}
+          className="scan-btn"
+        />
         <ViewMenu view={view} onChange={onView} />
         <Button icon="edit3" onClick={onCustomItem} title={t('pos.customItem')}>
           <span className="hide-md show-phone">{t('pos.customItemShort')}</span>

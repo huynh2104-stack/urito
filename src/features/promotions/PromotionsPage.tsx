@@ -77,8 +77,20 @@ export function PromotionsPage() {
                     </td>
                     <td className="right num">{p.usageCount}</td>
                     <td className="right">
-                      <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(p)} />
-                      <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(p)} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="edit"
+                        aria-label={t('common.edit')}
+                        onClick={() => setEditing(p)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="trash"
+                        aria-label={t('common.delete')}
+                        onClick={() => void remove(p)}
+                      />
                     </td>
                   </tr>
                 ))}

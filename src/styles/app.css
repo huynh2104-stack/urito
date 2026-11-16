@@ -1,15 +1,12 @@
 /* =========================================================================
-   Urito v0.2 layer - loaded after index.css.
-   Professional chrome (dark navigation rail, page titles, refined surfaces),
-   product imagery, and the phone layout: bottom navigation, bottom-sheet
-   dialogs and a slide-up cart. Still no framework and no web fonts, so the
-   weak shop PC pays nothing extra for it.
+   Urito v0.2 レイヤー（index.css の後に読込）
+   ナビゲーションバー、商品画像、モバイル向け下部シート・カートスライドを定義する。
    ========================================================================= */
 
 :root {
   --bottom-h: 62px;
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --kb: 0px; /* on-screen keyboard height, set from JS */
+  --kb: 0px; /* オンスクリーンキーボード高（JS 側から設定） */
 }
 
 /* -------------------------------------------------------------- images */
@@ -309,7 +306,7 @@
 
   .sidebar { width: 272px; }
 
-  /* The cart becomes a sheet that slides over the product grid. */
+  /* カート領域を商品一覧の上にスライド表示する */
   .pos-cart-fab {
     position: sticky;
     bottom: 0;
@@ -353,7 +350,7 @@
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid { gap: 10px; }
 
-  /* Dialogs become bottom sheets: easy to reach, never cut off. */
+  /* モーダルを画面下端シートとして表示し片手操作と視認性を確保する */
   .overlay { align-items: flex-end; padding: 0; }
   .modal,
   .modal-sm,
@@ -382,7 +379,7 @@
 
   .btn { padding: 9px 13px; }
   .btn-sm { padding: 6px 10px; }
-  .input, .select, .textarea { font-size: 16px; } /* stops iOS zoom-on-focus */
+  .input, .select, .textarea { font-size: 16px; } /* iOS フォーカス時の自動拡大を防ぐ */
 
   .product-form-head { flex-direction: column; align-items: stretch; }
   .image-drop { width: 100%; height: 160px; }
@@ -396,7 +393,12 @@
   to { transform: none; opacity: 1; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .scanner-line { animation: none; }
+  dialog.modal, .modal { animation: none; }
+}
+
 @media print {
-  .bottom-nav, .pos-shift-banner { display: none !important; }
+  .bottom-nav, .pos-shift-banner, dialog.modal { display: none !important; }
   .main-area { padding: 0 !important; }
 }

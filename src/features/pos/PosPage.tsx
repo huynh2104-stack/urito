@@ -59,7 +59,7 @@ export function PosPage() {
   const products = useLiveQuery(async () => db.products.toArray(), [], []);
   const categories = useLiveQuery(async () => db.categories.toArray(), [], []);
   const modifierGroups = useLiveQuery(async () => db.modifierGroups.toArray(), [], []);
-  /* Units sold per product over the last 30 days - only read when sorting by it. */
+    /* 直近30日間の商品別販売数は「売れ筋順」ソート時のみ参照する。 */
   const sold = useLiveQuery(
     async () => {
       if (view.sort !== 'sold') return new Map<string, number>();
@@ -91,7 +91,7 @@ export function PosPage() {
   const searchIndex = useMemo(() => buildProductSearchIndex(activeProducts), [activeProducts]);
   const deferredSearch = useDeferredValue(search);
 
-  /* Resume a table order or a held ticket passed in the URL. */
+    /* URL クエリで指定されたテーブル伝票または保留伝票を再開する。 */
   const resumeId = route.query.get('order');
   useEffect(() => {
     if (!resumeId) return;
@@ -152,8 +152,7 @@ export function PosPage() {
     [pick],
   );
 
-  /** Resolve a scanned or typed code. "3*8934..." adds three at once - the
-   *  shorthand grocery cashiers use when a customer buys a whole case. */
+    /** スキャンまたは手入力コードを解決する。「3*8934...」形式で3点まとめて追加できる。 */
   const addByCode = (raw: string): boolean => {
     const match = raw.trim().match(/^(\d+(?:[.,]\d+)?)\s*[*xX]\s*(.+)$/);
     const qty = match ? Number(match[1].replace(',', '.')) : 1;

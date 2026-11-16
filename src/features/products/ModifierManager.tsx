@@ -53,8 +53,20 @@ export function ModifierManager({ groups }: { groups: ModifierGroup[] }) {
                   {g.multiple && <span className="badge badge-info">{t('products.modifierMultiple')}</span>}
                 </div>
                 <div className="row gap-4">
-                  <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(g)} />
-                  <Button variant="ghost" size="sm" icon="trash" onClick={() => void remove(g)} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="edit"
+                    aria-label={t('common.edit')}
+                    onClick={() => setEditing(g)}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="trash"
+                    aria-label={t('common.delete')}
+                    onClick={() => void remove(g)}
+                  />
                 </div>
               </div>
               <div className="card-body">
@@ -158,6 +170,7 @@ function ModifierForm({
                 <Button
                   variant="ghost"
                   icon="trash"
+                  aria-label={t('common.delete')}
                   onClick={() => setOptions(options.filter((_, j) => j !== i))}
                 />
               </div>

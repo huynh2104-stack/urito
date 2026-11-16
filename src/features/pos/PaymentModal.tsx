@@ -38,8 +38,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [method, setMethod] = useState<PayMethod>('cash');
   const [amount, setAmount] = useState(totals.total);
-  /** True while the amount is the auto-filled one: the first quick-cash or
-   *  keypad press replaces it, later presses add to what the cashier built. */
+    /** 自動入力された初期金額のままかどうか。初回クイック現金・テンキー押下時は置換し、以降は加算入力する。 */
   const [fresh, setFresh] = useState(true);
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
@@ -116,8 +115,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
   };
 
   if (done) {
-    // Any way out of the receipt popup (button, X, tapping outside, Esc) ends the
-    // sale: the paid items must not linger in the cart.
+    // レシート確認モーダルをどの方法（閉じる・×・外側タップ・Esc）で閉じても会計完了とし、決済済み商品をカートから消去する
     const finish = () => {
       useCart.getState().clear();
       onClose();
@@ -224,7 +222,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
           <div className="card card-pad">
             <div className="row between">
               <span className="muted">{t('common.total')}</span>
-              <span className="num" style={{ fontSize: 26, fontWeight: 750 }}>
+              <span className="num" style={{ fontSize: 26, fontWeight: 700 }}>
                 {money(totals.total)}
               </span>
             </div>
@@ -239,6 +237,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm btn-icon"
+                        aria-label={t('common.delete')}
                         onClick={() => {
                           const next = entries.filter((_, j) => j !== i);
                           const nextPaid = next.reduce((s, x) => s + x.amount, 0);

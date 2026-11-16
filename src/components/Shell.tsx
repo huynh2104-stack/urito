@@ -19,7 +19,7 @@ interface NavEntry {
   labelKey: TranslationKey;
   icon: IconName;
   permission: Permission;
-  /** Hidden unless the shop is one of these types. */
+  /** 指定された業種タイプ以外では非表示にする。 */
   onlyFor?: BusinessType[];
   badge?: 'lowStock' | 'openOrders';
 }
@@ -120,7 +120,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const badgeFor = (item: NavEntry) =>
     item.badge === 'lowStock' ? lowStockCount : item.badge === 'openOrders' ? openOrderCount : 0;
 
-  /* Phones get a thumb-reachable bottom bar with the four screens used most. */
+  /* スマートフォン向けには利用頻度の高い4画面へ届く下部ナビゲーションを表示する。 */
   const bottom = [
     flat.find((i) => i.path === '/'),
     flat.find((i) => i.path === '/pos'),
@@ -203,6 +203,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="row wrap gap-6" style={{ alignItems: 'center' }}>
               <Select
                 value={demoScenario ?? 'ja-retail'}
+                aria-label={t('demo.banner')}
                 onChange={(e) => void switchDemoScenario(e.target.value as DemoScenario)}
                 style={{ height: 28, padding: '2px 24px 2px 8px', fontSize: 12, width: 'auto' }}
               >
@@ -235,6 +236,8 @@ export function Shell({ children }: { children: ReactNode }) {
               size="sm"
               variant="soft"
               icon="refresh"
+              aria-label={t('pwa.updateAvailable')}
+              title={t('pwa.updateAvailable')}
               onClick={() => {
                 void (async () => {
                   if (!useCart.getState().isEmpty()) {
@@ -250,12 +253,19 @@ export function Shell({ children }: { children: ReactNode }) {
                 })();
               }}
             >
-              <span className="hide-sm">{t('pwa.reload')}</span>
+              <span className="hide-sm">{t('pwa.updateAvailable')}</span>
             </Button>
           )}
           <OnlineDot />
           {route.segments[0] !== 'pos' && (
-            <Button size="sm" variant="primary" icon="pos" onClick={() => navigate('/pos')} className="hide-sm">
+            <Button
+              size="sm"
+              variant="primary"
+              icon="pos"
+              aria-label={t('nav.pos')}
+              onClick={() => navigate('/pos')}
+              className="hide-sm"
+            >
               {t('nav.pos')}
             </Button>
           )}

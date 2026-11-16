@@ -69,7 +69,13 @@ export function SuppliersPage() {
                 </div>
               </div>
               {s.debt > 0 && <span className="badge badge-warn num">{money(s.debt)}</span>}
-              <Button variant="ghost" size="sm" icon="edit" onClick={() => setEditing(s)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="edit"
+                aria-label={t('common.edit')}
+                onClick={() => setEditing(s)}
+              />
             </div>
           ))
         )}

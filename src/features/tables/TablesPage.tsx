@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, EmptyState, Field, Input, Modal, NumberInput, Select, Stat } from '@/components/ui';
+import { Button, EmptyState, Field, Input, Modal, NumberInput, Select, Stat, isCommitEnter } from '@/components/ui';
 import { db } from '@/db/db';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { useNow } from '@/lib/useNow';
@@ -11,7 +11,7 @@ import { navigate } from '@/router';
 import { useCart } from '@/store/cart';
 import type { Area, DiningTable, Order } from '@/db/types';
 
-/** Group tables by their area first, so A1..A6 never interleave with B1..B6. */
+/** エリアごとにテーブルをグループ化し、A1..A6 と B1..B6 が混在しないように並べる。 */
 export function sortTables(tables: DiningTable[], areas: Area[]): DiningTable[] {
   const order = new Map(areas.map((a, i) => [a.id, a.sort ?? i]));
   return [...tables].sort(
@@ -321,7 +321,7 @@ function TableManager({
               placeholder={t('tab.newArea')}
               onChange={(e) => setAreaName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') void addArea();
+                if (isCommitEnter(e)) void addArea();
               }}
             />
             <Button icon="plus" onClick={() => void addArea()}>
@@ -336,6 +336,7 @@ function TableManager({
                   type="button"
                   className="btn btn-ghost btn-sm btn-icon"
                   style={{ padding: 0, marginLeft: 4 }}
+                  aria-label={t('common.delete')}
                   onClick={() => void removeArea(a)}
                 >
                   ×
@@ -383,7 +384,13 @@ function TableManager({
                 <span className="dim small">
                   {tb.seats} {t('tab.seats')}
                 </span>
-                <Button variant="ghost" size="sm" icon="trash" onClick={() => void removeTable(tb)} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="trash"
+                  aria-label={t('common.delete')}
+                  onClick={() => void removeTable(tb)}
+                />
               </div>
             ))
           )}
