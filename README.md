@@ -131,7 +131,7 @@ npm run build                # 通常（日本語既定・公開/PWA）ビルド
 node scripts/check-size.mjs  # バンドルサイズ予算検証 (perf-budget.json)
 npm run docs:features        # registry.ts -> docs/ja/features.md & README.md 更新
 npm run build:showcase       # LP (site/) + POS (/app/) 統合ビルド -> dist-showcase/
-npm run build:shop           # ベトナム実店舗向け --mode shop ビルド + Netlify ZIP 生成
+npm run build:netlify        # 本番ビルド + Netlify 手動デプロイ用 ZIP 生成
 ```
 
 ## セキュリティ上の前提

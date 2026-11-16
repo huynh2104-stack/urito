@@ -1,6 +1,6 @@
 {
   "name": "urito",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -18,7 +18,7 @@
     "build:images": "node scripts/build-sample-images.mjs",
     "build:site": "vite build --config vite.site.config.ts",
     "build:showcase": "npm run build && npm run build:site && node scripts/assemble-showcase.mjs",
-    "build:shop": "tsc -b && vite build --mode shop && python scripts/zip-netlify.py",
+    "build:netlify": "tsc -b && vite build && python scripts/zip-netlify.py",
     "docs:features": "node scripts/docs-features.mjs"
   },
   "dependencies": {

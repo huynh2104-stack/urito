@@ -45,9 +45,7 @@ export function makeT(lang: Lang): TFunc {
 }
 
 /** ビルドモードおよびブラウザ言語から初期言語を判定する（shop ビルドではベトナム語を既定とする）。 */
+/** 初期言語は常に日本語。ブラウザの言語設定では切り替えない（切替は設定画面から行う）。 */
 export function detectLang(): Lang {
-  if (import.meta.env.MODE === 'shop') return 'vi';
-  const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'ja';
-  if (nav.startsWith('vi')) return 'vi';
   return 'ja';
 }

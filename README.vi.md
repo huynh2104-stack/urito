@@ -37,7 +37,7 @@ npm run typecheck                # Kiểm tra TypeScript
 npm run lint                     # ESLint + jsx-a11y + react-hooks
 npm test                         # Toàn bộ kiểm thử Vitest (112 test)
 npm run build                    # Build PWA chuẩn (mặc định tiếng Nhật + dist/sw.js)
-npm run build:shop               # Build bản Việt hoá (--mode shop) + xuất file zip Netlify
+npm run build:netlify            # Build bản chính thức + xuất file zip để kéo thả lên Netlify
 npm run build:showcase           # Kết hợp trang giới thiệu LP (site/) + POS (/app/)
 node scripts/e2e/offline-sw.mjs  # Kiểm thử E2E ngoại tuyến & cập nhật Service Worker
 node scripts/e2e/a11y-audit.mjs  # Kiểm tra truy cập WCAG qua axe-core (24 tổ hợp)

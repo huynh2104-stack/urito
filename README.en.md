@@ -40,7 +40,7 @@ npm run build                # Production PWA build (Japanese default + dist/sw.
 node scripts/check-size.mjs  # Verify bundle size budgets (perf-budget.json)
 npm run docs:features        # Sync feature table to docs/ja/features.md & README.md
 npm run build:showcase       # Combine LP (site/) + POS (/app/) -> dist-showcase/
-npm run build:shop           # Vietnamese store build (--mode shop) + Netlify zip
+npm run build:netlify        # Production build + zip for Netlify manual deploy
 node scripts/e2e/offline-sw.mjs  # Playwright offline & SW update E2E
 node scripts/e2e/a11y-audit.mjs  # Playwright + axe-core WCAG audit (24 matrix checks)
 ```

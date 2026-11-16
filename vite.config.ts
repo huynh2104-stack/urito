@@ -6,40 +6,6 @@ import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import type { Plugin } from 'vite';
 
-/** E-06: 実店舗向け Netlify ビルド（--mode shop）時に HTML・マニフェストをベトナム語表記へ切り替える。 */
-function uritoShopVariant(isShop: boolean): Plugin {
-  return {
-    name: 'urito-shop-variant',
-    apply: 'build',
-    transformIndexHtml(html) {
-      if (!isShop) return html;
-      return html
-        .replace('<html lang="ja"', '<html lang="vi"')
-        .replace(
-          'content="Urito - オフライン対応POSレジ・会計・レシート・売上レポート"',
-          'content="Urito - Phần mềm bán hàng, thu ngân, in hoá đơn và báo cáo doanh thu ngoại tuyến"',
-        )
-        .replace('<title>Urito</title>', '<title>Urito POS — Phần mềm bán hàng</title>');
-    },
-    writeBundle(options) {
-      if (!isShop) return;
-      const root = fileURLToPath(new URL('.', import.meta.url));
-      const baseManifest = JSON.parse(
-        readFileSync(join(root, 'public', 'manifest.webmanifest'), 'utf8'),
-      ) as Record<string, unknown>;
-      const shopManifest = {
-        ...baseManifest,
-        name: 'Urito POS — Bán hàng',
-        short_name: 'Urito',
-        description: 'Phần mềm bán hàng, thu ngân, in hoá đơn và quản lý tồn kho ngoại tuyến',
-        lang: 'vi',
-      };
-      const outDir = options.dir ?? join(root, 'dist');
-      writeFileSync(join(outDir, 'manifest.webmanifest'), `${JSON.stringify(shopManifest, null, 2)}\n`, 'utf8');
-    },
-  };
-}
-
 /** B-07: 本番ビルド時のアセット一覧をハッシュ付きで埋め込んだ sw.js を生成する（実ファイル存在確認済みのアセットのみ登録）。 */
 function uritoServiceWorker(): Plugin {
   return {
@@ -82,9 +48,9 @@ function uritoServiceWorker(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   base: './',
-  plugins: [react(), uritoShopVariant(mode === 'shop'), uritoServiceWorker()],
+  plugins: [react(), uritoServiceWorker()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
