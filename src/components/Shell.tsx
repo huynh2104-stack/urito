@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
-import { Button, Modal } from './ui';
+import { Button, Modal, Select } from './ui';
 import { Logo } from './Logo';
 import { navigate, useRoute } from '@/router';
 import { can, useApp, useT } from '@/store/app';
 import { useCart } from '@/store/cart';
-import { confirmDialog, useUI } from '@/store/ui';
+import { confirmDialog, toast, useUI } from '@/store/ui';
 import { applyServiceWorkerUpdate } from '@/lib/sw';
 import { useLiveQuery } from '@/lib/useLiveQuery';
-import { db } from '@/db/db';
+import { db, isDemoMode, type DemoScenario } from '@/db/db';
+import { featureStatusForPath } from '@/features/registry';
 import type { Permission } from '@/store/app';
 import type { TranslationKey } from '@/i18n';
 import type { BusinessType, Role } from '@/db/types';
@@ -60,6 +61,7 @@ const NAV: { groupKey: TranslationKey; items: NavEntry[] }[] = [
       { path: '/users', labelKey: 'nav.users', icon: 'user', permission: 'manageStaff' },
       { path: '/backup', labelKey: 'nav.backup', icon: 'cloud', permission: 'manageBackup' },
       { path: '/settings', labelKey: 'nav.settings', icon: 'settings', permission: 'manageSettings' },
+      { path: '/roadmap', labelKey: 'nav.roadmap', icon: 'list', permission: 'sell' },
     ],
   },
 ];
@@ -79,7 +81,9 @@ function isActive(itemPath: string, routePath: string): boolean {
 export function Shell({ children }: { children: ReactNode }) {
   const t = useT();
   const route = useRoute();
-  const { settings, user, updateReady } = useApp();
+  const { settings, user, updateReady, demoScenario, switchDemoScenario, resetDemo, exitDemo } = useApp();
+  const demo = isDemoMode();
+  const wipBanner = featureStatusForPath('/' + (route.segments[0] ?? '')) === 'wip';
   const sidebarOpen = useUI((s) => s.sidebarOpen);
   const setSidebar = useUI((s) => s.setSidebar);
 
@@ -146,6 +150,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <div className="nav-group">{t(group.groupKey)}</div>
               {group.items.map((item) => {
                 const badge = badgeFor(item);
+                const fStatus = featureStatusForPath(item.path);
                 return (
                   <button
                     key={item.path}
@@ -158,6 +163,14 @@ export function Shell({ children }: { children: ReactNode }) {
                   >
                     <Icon name={item.icon} size={17} />
                     <span className="grow truncate">{t(item.labelKey)}</span>
+                    {fStatus && (
+                      <span
+                        className={`badge ${fStatus === 'beta' ? 'badge-info' : 'badge-warn'}`}
+                        style={{ fontSize: 10, padding: '1px 5px' }}
+                      >
+                        {t(fStatus === 'beta' ? 'roadmap.statusBeta' : 'roadmap.statusWip')}
+                      </span>
+                    )}
                     {badge > 0 && <span className="nav-badge">{badge}</span>}
                   </button>
                 );
@@ -172,6 +185,40 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="main-area">
+        {demo && (
+          <div
+            className="row wrap gap-8 between"
+            style={{
+              padding: '6px 12px',
+              background: 'var(--c-warn-soft)',
+              color: 'var(--c-warn)',
+              borderBottom: '1px solid var(--c-border)',
+              fontSize: 12.5,
+            }}
+          >
+            <span className="row gap-6" style={{ alignItems: 'center', fontWeight: 600 }}>
+              <Icon name="info" size={14} />
+              {t('demo.banner')}
+            </span>
+            <span className="row wrap gap-6" style={{ alignItems: 'center' }}>
+              <Select
+                value={demoScenario ?? 'ja-retail'}
+                onChange={(e) => void switchDemoScenario(e.target.value as DemoScenario)}
+                style={{ height: 28, padding: '2px 24px 2px 8px', fontSize: 12, width: 'auto' }}
+              >
+                <option value="ja-retail">{t('demo.retail')}</option>
+                <option value="ja-cafe">{t('demo.cafe')}</option>
+                <option value="ja-restaurant">{t('demo.restaurant')}</option>
+              </Select>
+              <Button size="sm" onClick={() => void resetDemo().then(() => toast.success(t('demo.resetDone')))}>
+                {t('demo.reset')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={exitDemo}>
+                {t('demo.exit')}
+              </Button>
+            </span>
+          </div>
+        )}
         <header className="topbar">
           <button
             type="button"
@@ -216,6 +263,11 @@ export function Shell({ children }: { children: ReactNode }) {
             <UserMenu placement="down" compact />
           </div>
         </header>
+        {wipBanner && (
+          <div className="callout callout-warn" style={{ margin: '10px 16px 0' }}>
+            {t('roadmap.wipBanner')}
+          </div>
+        )}
         {children}
 
         <nav className="bottom-nav">

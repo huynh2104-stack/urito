@@ -27,6 +27,7 @@ import { UsersPage } from './features/users/UsersPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { BackupPage } from './features/backup/BackupPage';
 import { LabelsPage } from './features/products/LabelsPage';
+import { RoadmapPage } from './features/roadmap/RoadmapPage';
 
 function NoPermission() {
   const t = useT();
@@ -88,6 +89,8 @@ function RouteView() {
       return <BackupPage />;
     case 'labels':
       return <LabelsPage />;
+    case 'roadmap':
+      return <RoadmapPage />;
     default:
       return <DashboardPage />;
   }

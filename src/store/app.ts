@@ -1,13 +1,44 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { liveQuery } from 'dexie';
-import { db, ensureDbOpen, kvGet, kvSet } from '@/db/db';
-import { loadOrInitSettings } from '@/db/seed';
+import {
+  clearDemoScenarioStorage,
+  db,
+  ensureDbOpen,
+  getDemoScenario,
+  isDemoMode,
+  kvGet,
+  kvSet,
+  setDemoScenarioStorage,
+  type DemoScenario,
+} from '@/db/db';
+import { loadOrInitSettings, seedWorkspace } from '@/db/seed';
 import { defaultSettings } from '@/db/defaults';
 import { makeT, type TFunc } from '@/i18n';
 import { formatAmount, formatMoney } from '@/core/money';
-import type { Role, Settings, Shift, User } from '@/db/types';
-import { initCartDraft } from './cart';
+import type { BusinessType, Role, Settings, Shift, User } from '@/db/types';
+import { initCartDraft, useCart } from './cart';
+
+const DEMO_CONFIG: Record<DemoScenario, { businessType: BusinessType; shopName: string }> = {
+  'ja-retail': { businessType: 'retail', shopName: 'うりと商店' },
+  'ja-cafe': { businessType: 'cafe', shopName: '喫茶うりと' },
+  'ja-restaurant': { businessType: 'restaurant', shopName: 'うりと食堂' },
+};
+
+async function seedDemoScenario(scenario: DemoScenario): Promise<Settings> {
+  const cfg = DEMO_CONFIG[scenario];
+  await Promise.all(db.tables.map((t) => t.clear()));
+  useCart.getState().clear();
+  return seedWorkspace({
+    businessType: cfg.businessType,
+    lang: 'ja',
+    currency: 'JPY',
+    shopName: cfg.shopName,
+    ownerName: '店主',
+    withSampleData: true,
+    withSampleHistory: true,
+  });
+}
 
 const LAST_USER_KEY = 'session.lastUserId';
 /** Stored instead of a user id when someone signs out, so a reload shows the
@@ -24,8 +55,12 @@ export interface AppState {
   shift: Shift | null;
   /** Set when the service worker has a newer build waiting. */
   updateReady: boolean;
+  demoScenario: DemoScenario | null;
 
   init: () => Promise<void>;
+  switchDemoScenario: (scenario: DemoScenario) => Promise<void>;
+  resetDemo: () => Promise<void>;
+  exitDemo: () => void;
   reloadSettings: () => Promise<void>;
   updateSettings: (patch: SettingsPatch) => Promise<void>;
   reloadUsers: () => Promise<void>;
@@ -44,10 +79,15 @@ export const useApp = create<AppState>()((set, get) => ({
   user: null,
   shift: null,
   updateReady: false,
+  demoScenario: null,
 
   async init() {
     await ensureDbOpen();
-    const settings = await loadOrInitSettings();
+    let settings = await loadOrInitSettings();
+    const demoScenario = isDemoMode() ? (getDemoScenario() ?? 'ja-retail') : null;
+    if (demoScenario && !settings.onboarded) {
+      settings = await seedDemoScenario(demoScenario);
+    }
     applyDomSettings(settings);
 
     settingsSub?.unsubscribe();
@@ -61,18 +101,46 @@ export const useApp = create<AppState>()((set, get) => ({
 
     const users = await db.users.filter((u) => u.active).toArray();
     let user: User | null = null;
-    const lastId = await kvGet<string>(LAST_USER_KEY);
-    const signedOut = lastId === SIGNED_OUT && users.length > 1;
-    if (lastId && !signedOut) user = users.find((u) => u.id === lastId) ?? null;
-    // 自動ログインは安全な場合のみ（PIN未設定の単一アカウント等）
-    if (!user && !signedOut && !settings.requireLogin) {
-      const fallback = users.find((u) => u.role === 'owner') ?? users[0];
-      if (fallback && !fallback.pin) user = fallback;
+    if (demoScenario) {
+      user = users.find((u) => u.role === 'owner') ?? users[0] ?? null;
+    } else {
+      const lastId = await kvGet<string>(LAST_USER_KEY);
+      const signedOut = lastId === SIGNED_OUT && users.length > 1;
+      if (lastId && !signedOut) user = users.find((u) => u.id === lastId) ?? null;
+      // 自動ログインは安全な場合のみ（PIN未設定の単一アカウント等）
+      if (!user && !signedOut && !settings.requireLogin) {
+        const fallback = users.find((u) => u.role === 'owner') ?? users[0];
+        if (fallback && !fallback.pin) user = fallback;
+      }
+      if (user?.pin && settings.requireLogin) user = null;
     }
-    if (user?.pin && settings.requireLogin) user = null;
     const shift = user ? await findOpenShift(user.id) : null;
-    set({ ready: true, settings, users, user, shift });
+    set({ ready: true, settings, users, user, shift, demoScenario });
     await initCartDraft();
+  },
+
+  async switchDemoScenario(scenario) {
+    setDemoScenarioStorage(scenario);
+    const settings = await seedDemoScenario(scenario);
+    applyDomSettings(settings);
+    const users = await db.users.filter((u) => u.active).toArray();
+    const user = users.find((u) => u.role === 'owner') ?? users[0] ?? null;
+    const shift = user ? await findOpenShift(user.id) : null;
+    set({ ready: true, settings, users, user, shift, demoScenario: scenario });
+  },
+
+  async resetDemo() {
+    const cur = get().demoScenario ?? getDemoScenario() ?? 'ja-retail';
+    await get().switchDemoScenario(cur);
+  },
+
+  exitDemo() {
+    clearDemoScenarioStorage();
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('demo');
+      window.location.href = url.toString();
+    }
   },
 
   async reloadSettings() {
@@ -223,6 +291,7 @@ export const ROUTE_PERMISSION: Record<string, Permission> = {
   users: 'manageStaff',
   backup: 'manageBackup',
   settings: 'manageSettings',
+  roadmap: 'sell',
 };
 
 export function can(user: User | null, permission: Permission): boolean {

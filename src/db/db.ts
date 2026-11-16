@@ -50,7 +50,60 @@ export class UritoDB extends Dexie {
   }
 }
 
-export const db = new UritoDB();
+export type DemoScenario = 'ja-retail' | 'ja-cafe' | 'ja-restaurant';
+export const PROD_DB_NAME = 'urito';
+export const DEMO_DB_NAME = 'urito-demo';
+export const DEMO_SESSION_KEY = 'urito.demo';
+
+export function parseDemoScenario(raw: string | null | undefined): DemoScenario | null {
+  if (raw === 'ja-retail' || raw === 'ja-cafe' || raw === 'ja-restaurant') return raw;
+  return null;
+}
+
+function safeSessionStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null {
+  try {
+    return typeof window !== 'undefined' ? window.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+/** E-02: URL の ?demo=... または sessionStorage を参照し、Dexie 生成前に接続先DB名を決定する。 */
+export function resolveDbName(
+  search = typeof window !== 'undefined' ? window.location.search : '',
+  storage = safeSessionStorage(),
+): string {
+  const param = parseDemoScenario(new URLSearchParams(search).get('demo'));
+  if (param) {
+    storage?.setItem(DEMO_SESSION_KEY, param);
+    return DEMO_DB_NAME;
+  }
+  const saved = parseDemoScenario(storage?.getItem(DEMO_SESSION_KEY));
+  return saved ? DEMO_DB_NAME : PROD_DB_NAME;
+}
+
+export function getDemoScenario(
+  search = typeof window !== 'undefined' ? window.location.search : '',
+  storage = safeSessionStorage(),
+): DemoScenario | null {
+  const param = parseDemoScenario(new URLSearchParams(search).get('demo'));
+  if (param) return param;
+  return parseDemoScenario(storage?.getItem(DEMO_SESSION_KEY));
+}
+
+export function setDemoScenarioStorage(scenario: DemoScenario, storage = safeSessionStorage()): void {
+  storage?.setItem(DEMO_SESSION_KEY, scenario);
+}
+
+export function clearDemoScenarioStorage(storage = safeSessionStorage()): void {
+  storage?.removeItem(DEMO_SESSION_KEY);
+}
+
+export const db = new UritoDB(resolveDbName());
+
+export function isDemoMode(): boolean {
+  return db.name === DEMO_DB_NAME;
+}
 
 let openReady: Promise<void> | null = null;
 
