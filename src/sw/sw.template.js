@@ -1,15 +1,23 @@
-/* Urito service worker.
- * HTML is network-first so a new build is picked up as soon as there is a
- * connection; hashed assets are cache-first so the shop keeps working with no
- * internet at all. Everything is same-origin - the app never calls a server. */
+/* Urito Service Worker（ビルド時にキャッシュ名とプリキャッシュ一覧を注入する）
+ * HTML はオンライン更新の即時反映を優先しネットワーク優先、ハッシュ済みアセットはキャッシュ優先とする。 */
 
-const CACHE = 'urito-v5';
+const CACHE = '__URITO_CACHE__';
+const PRECACHE = /*__URITO_PRECACHE__*/ [];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  /* skipWaiting() はメッセージ受信時のみ呼び出し、利用中の画面・会計処理を強制リロードしない */
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(['./', './index.html', './manifest.webmanifest'])).catch(() => {}),
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(PRECACHE))
+      .catch(() => {}),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {

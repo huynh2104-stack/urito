@@ -14,6 +14,7 @@ const SWIPE_DELETE = 84;
  *  changes when the text is a valid quantity above zero; an empty or "0" draft
  *  is left alone until you leave the field, then it snaps back. */
 function QtyInput({ item, setQty }: { item: OrderItem; setQty: (n: number) => void }) {
+  const t = useT();
   const lang = useApp((s) => s.settings.lang);
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ function QtyInput({ item, setQty }: { item: OrderItem; setQty: (n: number) => vo
     <input
       value={draft ?? formatQty(item.qty, lang)}
       inputMode="decimal"
-      aria-label="qty"
+      aria-label={t('common.qty')}
       onFocus={(e) => {
         setDraft(String(item.qty).replace('.', lang === 'vi' ? ',' : '.'));
         e.target.select();
@@ -166,11 +167,11 @@ export function CartLine({
           </div>
           <div className="cart-line-bottom">
             <div className="qty-stepper">
-              <button type="button" onClick={() => useCart.getState().bumpQty(item.id, -1)} aria-label="-">
+              <button type="button" onClick={() => useCart.getState().bumpQty(item.id, -1)} aria-label={t('pos.decreaseQty')}>
                 −
               </button>
               <QtyInput item={item} setQty={setQty} />
-              <button type="button" onClick={() => setQty(item.qty + 1)} aria-label="+">
+              <button type="button" onClick={() => setQty(item.qty + 1)} aria-label={t('pos.increaseQty')}>
                 +
               </button>
             </div>

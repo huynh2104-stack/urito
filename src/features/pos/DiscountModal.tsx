@@ -39,8 +39,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
       toast.error(t('promo.minNotMet', { amount: money(promo.minTotal) }));
       return;
     }
-    useCart.getState().setDiscount(promo.type, promo.value, promo.name);
-    void db.promotions.update(promo.id, { usageCount: promo.usageCount + 1 });
+    useCart.getState().setDiscount(promo.type, promo.value, promo.name, promo.id);
     toast.success(t('promo.applied', { name: promo.name }));
     onClose();
   };

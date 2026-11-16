@@ -22,7 +22,12 @@ export function DashboardPage() {
   const [now] = useState(() => Date.now());
   const since = startOfDay(now - 7 * DAY);
   const orders = useLiveQuery(
-    async () => db.orders.where('createdAt').aboveOrEqual(since).toArray(),
+    async () => db.orders.where('paidAt').aboveOrEqual(since).toArray(),
+    [since],
+    [] as Order[],
+  );
+  const refundOrders = useLiveQuery(
+    async () => db.orders.filter((o) => o.refunds.some((r) => r.at >= since)).toArray(),
     [since],
     [] as Order[],
   );
@@ -33,12 +38,12 @@ export function DashboardPage() {
     [] as Order[],
   );
 
-  const today = rangeOf('today', now);
-  const yesterday = rangeOf('yesterday', now);
+  const today = useMemo(() => rangeOf('today', now), [now]);
+  const yesterday = useMemo(() => rangeOf('yesterday', now), [now]);
 
   const inRange = (list: Order[], from: number, to: number) =>
     list.filter((o) => {
-      const ts = o.paidAt || o.createdAt;
+      const ts = o.paidAt;
       return ts >= from && ts <= to;
     });
 
@@ -48,9 +53,12 @@ export function DashboardPage() {
     [orders, yesterday.from, yesterday.to],
   );
 
-  const todaySummary = summarise(todayOrders);
-  const yesterdaySummary = summarise(yesterdayOrders);
-  const series = useMemo(() => revenueByDay(orders, since, now), [orders, since, now]);
+  const todaySummary = useMemo(() => summarise(todayOrders, [], refundOrders, today), [todayOrders, refundOrders, today]);
+  const yesterdaySummary = useMemo(
+    () => summarise(yesterdayOrders, [], refundOrders, yesterday),
+    [yesterdayOrders, refundOrders, yesterday],
+  );
+  const series = useMemo(() => revenueByDay(orders, since, now, refundOrders), [orders, since, now, refundOrders]);
   const top = useMemo(() => productStats(todayOrders).slice(0, 5), [todayOrders]);
   const stock = useMemo(() => summariseStock(products), [products]);
 

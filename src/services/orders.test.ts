@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/db';
 import { defaultOwner, defaultSettings } from '@/db/defaults';
 import { useCart } from '@/store/cart';
-import { holdOrder, payOrder, refundOrder, reservedByOpenOrders, StockError, voidOrder } from './orders';
+import { holdOrder, payOrder, PaymentShortfallError, refundOrder, reservedByOpenOrders, StockError, voidOrder } from './orders';
 import { loadShiftData, openShift } from './shifts';
 import type { Customer, Product } from '@/db/types';
 
@@ -168,5 +168,65 @@ describe('別シフトでの返金・取消とポイント・売掛金相殺 (B-
     c = (await db.customers.get('c1'))!;
     expect(c.points).toBe(50);
     expect(c.debt).toBe(0);
+  });
+});
+
+describe('支払額不足ガードとプロモーション利用回数トランザクション更新 (B-08)', () => {
+  const user = defaultOwner('店主');
+
+  beforeEach(async () => {
+    await Promise.all(db.tables.map((t) => t.clear()));
+    await db.kv.put({ key: 'device.no', value: '01' });
+    await db.kv.put({ key: 'seq.order', value: 0 });
+    await db.products.put(product(10));
+    useCart.getState().clear();
+  });
+
+  it('allowDebt が false で支払額が合計未満のとき PaymentShortfallError を投げ、注文を保存しない', async () => {
+    const settings = defaultSettings('ja', 'JPY');
+    await db.settings.put(settings);
+    useCart.getState().addProduct(product(10), { qty: 2 }); // 2000
+
+    await expect(
+      payOrder({
+        cart: useCart.getState(),
+        ctx: { user, settings, shiftId: null },
+        payments: [{ method: 'cash', amount: 1500 }],
+        allowDebt: false,
+      }),
+    ).rejects.toBeInstanceOf(PaymentShortfallError);
+
+    expect(await db.orders.count()).toBe(0);
+    expect((await db.products.get('p1'))!.stock).toBe(10);
+  });
+
+  it('カートに promotionId がある状態で決済すると、同一トランザクション内で usageCount が +1 される', async () => {
+    const settings = defaultSettings('ja', 'JPY');
+    await db.settings.put(settings);
+    await db.promotions.put({
+      id: 'pr1',
+      code: 'SALE10',
+      name: '10%割引',
+      type: 'percent',
+      value: 10,
+      minTotal: 0,
+      startAt: 0,
+      endAt: 0,
+      active: true,
+      usageCount: 2,
+    });
+
+    useCart.getState().addProduct(product(10), { qty: 1 }); // 1000 -> -10% = 900
+    useCart.getState().setDiscount('percent', 10, '10%割引', 'pr1');
+
+    const order = await payOrder({
+      cart: useCart.getState(),
+      ctx: { user, settings, shiftId: null },
+      payments: [{ method: 'cash', amount: 900 }],
+      allowDebt: false,
+    });
+
+    expect(order.total).toBe(900);
+    expect((await db.promotions.get('pr1'))!.usageCount).toBe(3);
   });
 });

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/db';
-import { createSnapshot, mergeSnapshot, type Snapshot } from './backup';
+import { BackupValidationError, createSnapshot, mergeSnapshot, restoreSnapshot, type Snapshot } from './backup';
 import type { Customer, Order, Product, StockMovement } from '@/db/types';
 
 const now = Date.now();
@@ -97,5 +97,31 @@ describe('mergeSnapshot', () => {
     snap.data.settings = [{ id: 'app', shopName: 'Phone' }];
     await mergeSnapshot(snap);
     expect((await db.settings.get('app'))!.shopName).toBe('PC');
+  });
+});
+
+describe('スナップショット復元時のレコード単位バリデーション (B-08)', () => {
+  beforeEach(async () => {
+    await Promise.all(db.tables.map((t) => t.clear()));
+    await db.products.put(product());
+  });
+
+  it('不正な行を含むスナップショットはテーブル名と行番号付きで拒否し、既存DBデータを削除しない', async () => {
+    const snap = await createSnapshot('test');
+    const tampered = JSON.parse(JSON.stringify(snap)) as Snapshot;
+    tampered.data.products.push({ ...product({ id: 'p-bad' }), price: 'invalid' as unknown as number });
+
+    let caught: unknown = null;
+    try {
+      await restoreSnapshot(tampered);
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(BackupValidationError);
+    expect((caught as BackupValidationError).message).toContain('products[1]');
+    // 既存のDBデータは一切消えていない
+    expect(await db.products.count()).toBe(1);
+    expect((await db.products.get('p1'))!.name).toBe('Coca');
   });
 });

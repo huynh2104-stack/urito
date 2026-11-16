@@ -298,6 +298,7 @@ export function Modal({
   children: ReactNode;
   closeOnOverlay?: boolean;
 }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -320,7 +321,7 @@ export function Modal({
         <div className="sheet-handle" aria-hidden="true" />
         <div className="modal-head">
           <div className="modal-title">{title}</div>
-          <Button variant="ghost" size="sm" icon="x" onClick={onClose} aria-label="close" />
+          <Button variant="ghost" size="sm" icon="x" onClick={onClose} aria-label={t('common.close')} />
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}

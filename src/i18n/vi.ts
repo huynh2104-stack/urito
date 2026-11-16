@@ -734,6 +734,13 @@ export const vi = {
   'tax.roundCeil': 'Làm tròn lên',
   'tax.eatInRule': 'Tại chỗ / Mang về khác mức thuế',
   'tax.eatInRuleHint': 'Hàng 8% sẽ tính theo mức chuẩn 10% khi chọn ăn tại chỗ.',
+  'common.menu': 'Danh mục điều hướng',
+  'pos.decreaseQty': 'Giảm số lượng',
+  'pos.increaseQty': 'Tăng số lượng',
+  'pay.backspace': 'Xoá một chữ số',
+  'pos.draftRestored': 'Đã khôi phục đơn hàng đang soạn dở.',
+  'pwa.reloadConfirmTitle': 'Cập nhật phiên bản mới',
+  'pwa.reloadConfirmMessage': 'Giỏ hàng hiện có món chưa thanh toán (đã được lưu nháp). Tải lại ứng dụng ngay?',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

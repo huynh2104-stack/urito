@@ -5,7 +5,7 @@ import { CURRENCIES } from '@/core/money';
 import { useApp, useMoney, useT } from '@/store/app';
 import { useCart, useCartTotals } from '@/store/cart';
 import { toast, useUI } from '@/store/ui';
-import { payOrder, StockError } from '@/services/orders';
+import { payOrder, PaymentShortfallError, StockError } from '@/services/orders';
 import { notifyOrderPaid } from '@/features/backup/useAutoBackup';
 import { printDocument } from '@/print/PrintHost';
 import { Receipt } from '@/print/Receipt';
@@ -95,6 +95,10 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
       setDone(order);
       if (settings.printAfterPay) printDocument(<Receipt order={order} />);
     } catch (err) {
+      if (err instanceof PaymentShortfallError) {
+        toast.warning(t('pay.due') + ': ' + money(err.total - err.paid));
+        return;
+      }
       if (err instanceof StockError) {
         useUI.getState().showStockAlert(t('pos.stockBlocked', { name: err.productName, n: err.available }));
         onClose();
@@ -340,7 +344,7 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="keypad-back"
-              aria-label="backspace"
+              aria-label={t('pay.backspace')}
               onClick={() => {
                 setAmount(Math.floor(amount / 10 ** decimals / 10) * 10 ** decimals);
                 setFresh(false);

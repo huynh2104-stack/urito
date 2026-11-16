@@ -15,7 +15,7 @@ export interface OrderContext {
   shiftId: string | null;
 }
 
-const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers, db.kv];
+const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers, db.kv, db.promotions];
 
 function baseOrder(cart: CartState, ctx: OrderContext): Order {
   const totals = cartTotals(cart, ctx.settings);
@@ -90,10 +90,23 @@ export class StockError extends Error {
   }
 }
 
+/** B-08: 掛売(allowDebt)が許可されていないにもかかわらず支払額が合計に満たない場合のエラー。 */
+export class PaymentShortfallError extends Error {
+  constructor(
+    public total: number,
+    public paid: number,
+  ) {
+    super(`Payment shortfall: ${paid} < ${total}`);
+  }
+}
+
 /** Parks the current cart as an open ticket (a held order or a live table). */
 export async function holdOrder(cart: CartState, ctx: OrderContext): Promise<Order> {
   const order = baseOrder(cart, ctx);
-  await db.orders.put(order);
+  await db.transaction('rw', [db.orders, db.kv], async () => {
+    await db.orders.put(order);
+    await db.kv.delete('cart.draft');
+  });
   return order;
 }
 
@@ -139,6 +152,9 @@ export async function payOrder(input: PayInput): Promise<Order> {
     const paidAmount = payments.reduce((s, p) => s + p.amount, 0);
     const changeAmount = Math.max(0, paidAmount - order.total);
     const dueAmount = Math.max(0, order.total - paidAmount);
+    if (paidAmount < order.total && !input.allowDebt) {
+      throw new PaymentShortfallError(order.total, paidAmount);
+    }
 
     order.payments = payments;
     order.paidAmount = paidAmount;
@@ -179,6 +195,14 @@ export async function payOrder(input: PayInput): Promise<Order> {
         });
       }
     }
+
+    if (cart.promotionId) {
+      const promo = await db.promotions.get(cart.promotionId);
+      if (promo) {
+        await db.promotions.update(promo.id, { usageCount: promo.usageCount + 1 });
+      }
+    }
+    await db.kv.delete('cart.draft');
 
     return order;
   });

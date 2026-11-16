@@ -52,16 +52,28 @@ export function ReportsPage() {
   const [custom, setCustom] = useState(() => rangeOf('this_month'));
   const [tab, setTab] = useState<TabKey>('overview');
 
-  const range = preset === 'custom' ? custom : rangeOf(preset);
-  const prev = previousRange(range);
+  const range = useMemo(() => (preset === 'custom' ? custom : rangeOf(preset)), [preset, custom]);
+  const prev = useMemo(() => previousRange(range), [range]);
 
   const orders = useLiveQuery(
-    async () => db.orders.where('createdAt').between(range.from, range.to, true, true).toArray(),
+    async () => db.orders.where('paidAt').between(range.from, range.to, true, true).toArray(),
+    [range.from, range.to],
+    [] as Order[],
+  );
+  const refundOrders = useLiveQuery(
+    async () =>
+      db.orders.filter((o) => o.refunds.some((r) => r.at >= range.from && r.at <= range.to)).toArray(),
     [range.from, range.to],
     [] as Order[],
   );
   const prevOrders = useLiveQuery(
-    async () => db.orders.where('createdAt').between(prev.from, prev.to, true, true).toArray(),
+    async () => db.orders.where('paidAt').between(prev.from, prev.to, true, true).toArray(),
+    [prev.from, prev.to],
+    [] as Order[],
+  );
+  const prevRefundOrders = useLiveQuery(
+    async () =>
+      db.orders.filter((o) => o.refunds.some((r) => r.at >= prev.from && r.at <= prev.to)).toArray(),
     [prev.from, prev.to],
     [] as Order[],
   );
@@ -73,10 +85,19 @@ export function ReportsPage() {
   const products = useLiveQuery(async () => db.products.toArray(), [], []);
   const categories = useLiveQuery(async () => db.categories.toArray(), [], []);
 
-  const summary = useMemo(() => summarise(orders, expenses), [orders, expenses]);
+  const summary = useMemo(
+    () => summarise(orders, expenses, refundOrders, range),
+    [orders, expenses, refundOrders, range],
+  );
   const taxLines = useMemo(() => summariseTaxLines(orders), [orders]);
-  const prevSummary = useMemo(() => summarise(prevOrders), [prevOrders]);
-  const byDay = useMemo(() => revenueByDay(orders, range.from, range.to), [orders, range.from, range.to]);
+  const prevSummary = useMemo(
+    () => summarise(prevOrders, [], prevRefundOrders, prev),
+    [prevOrders, prevRefundOrders, prev],
+  );
+  const byDay = useMemo(
+    () => revenueByDay(orders, range.from, range.to, refundOrders),
+    [orders, range.from, range.to, refundOrders],
+  );
   const byHour = useMemo(() => revenueByHour(orders), [orders]);
   const top = useMemo(() => productStats(orders), [orders]);
   const catNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);

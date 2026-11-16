@@ -7,6 +7,7 @@ import { defaultSettings } from '@/db/defaults';
 import { makeT, type TFunc } from '@/i18n';
 import { formatAmount, formatMoney } from '@/core/money';
 import type { Role, Settings, Shift, User } from '@/db/types';
+import { initCartDraft } from './cart';
 
 const LAST_USER_KEY = 'session.lastUserId';
 /** Stored instead of a user id when someone signs out, so a reload shows the
@@ -71,6 +72,7 @@ export const useApp = create<AppState>()((set, get) => ({
     if (user?.pin && settings.requireLogin) user = null;
     const shift = user ? await findOpenShift(user.id) : null;
     set({ ready: true, settings, users, user, shift });
+    await initCartDraft();
   },
 
   async reloadSettings() {

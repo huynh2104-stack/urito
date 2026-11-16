@@ -734,4 +734,11 @@ export const ja: Dictionary = {
   'tax.roundCeil': '切り上げ',
   'tax.eatInRule': '店内飲食の税率切替',
   'tax.eatInRuleHint': '店内飲食(イートイン)時は軽減税率対象品にも標準税率を適用します。',
+  'common.menu': 'メニュー',
+  'pos.decreaseQty': '数量を減らす',
+  'pos.increaseQty': '数量を増やす',
+  'pay.backspace': '1文字削除',
+  'pos.draftRestored': '入力途中の会計内容を復元しました。',
+  'pwa.reloadConfirmTitle': '新しいバージョンへ更新',
+  'pwa.reloadConfirmMessage': 'カートに未会計の商品があります（下書き保存済み）。今すぐ再読込しますか？',
 };

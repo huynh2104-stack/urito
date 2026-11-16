@@ -8,6 +8,11 @@ export default tseslint.config(
   { ignores: ['dist/**', 'dist-site/**', 'node_modules/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
+  {
+    files: ['src/sw/**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: globals.serviceworker },
+  },
   reactHooks.configs.flat.recommended,
   jsxA11y.flatConfigs.recommended,
   {

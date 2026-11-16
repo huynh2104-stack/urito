@@ -45,10 +45,18 @@ export function OrdersPage() {
   const range = preset === 'custom' ? custom : rangeOf(preset);
 
   const orders = useLiveQuery(
-    async () =>
-      (await db.orders.where('createdAt').between(range.from, range.to, true, true).toArray()).sort(
-        (a, b) => (b.paidAt || b.createdAt) - (a.paidAt || a.createdAt),
-      ),
+    async () => {
+      const [paidInRange, createdInRange] = await Promise.all([
+        db.orders.where('paidAt').between(range.from, range.to, true, true).toArray(),
+        db.orders.where('createdAt').between(range.from, range.to, true, true).toArray(),
+      ]);
+      const byId = new Map<string, Order>();
+      for (const o of paidInRange) byId.set(o.id, o);
+      for (const o of createdInRange) {
+        if (o.status === 'open' || o.paidAt === 0) byId.set(o.id, o);
+      }
+      return [...byId.values()].sort((a, b) => (b.paidAt || b.createdAt) - (a.paidAt || a.createdAt));
+    },
     [range.from, range.to],
     [] as Order[],
   );

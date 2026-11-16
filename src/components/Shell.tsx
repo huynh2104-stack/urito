@@ -4,7 +4,9 @@ import { Button, Modal } from './ui';
 import { Logo } from './Logo';
 import { navigate, useRoute } from '@/router';
 import { can, useApp, useT } from '@/store/app';
-import { useUI } from '@/store/ui';
+import { useCart } from '@/store/cart';
+import { confirmDialog, useUI } from '@/store/ui';
+import { applyServiceWorkerUpdate } from '@/lib/sw';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { db } from '@/db/db';
 import type { Permission } from '@/store/app';
@@ -175,14 +177,32 @@ export function Shell({ children }: { children: ReactNode }) {
             type="button"
             className="icon-btn mobile-only"
             onClick={() => setSidebar(!sidebarOpen)}
-            aria-label="menu"
+            aria-label={t('common.menu')}
           >
             <Icon name="menu" size={20} />
           </button>
           <div className="topbar-title truncate">{title}</div>
           <span className="grow" />
           {updateReady && (
-            <Button size="sm" variant="soft" icon="refresh" onClick={() => window.location.reload()}>
+            <Button
+              size="sm"
+              variant="soft"
+              icon="refresh"
+              onClick={() => {
+                void (async () => {
+                  if (!useCart.getState().isEmpty()) {
+                    const ok = await confirmDialog({
+                      title: t('pwa.reloadConfirmTitle'),
+                      message: t('pwa.reloadConfirmMessage'),
+                      confirmLabel: t('pwa.reload'),
+                      cancelLabel: t('common.cancel'),
+                    });
+                    if (!ok) return;
+                  }
+                  if (!applyServiceWorkerUpdate()) window.location.reload();
+                })();
+              }}
+            >
               <span className="hide-sm">{t('pwa.reload')}</span>
             </Button>
           )}

@@ -11,6 +11,9 @@ import type {
   Product,
   Settings,
 } from '@/db/types';
+import { kvDelete, kvGet, kvSet } from '@/db/db';
+import { makeT } from '@/i18n';
+import { toast } from './ui';
 import { useApp } from './app';
 
 export interface CartState {
@@ -31,6 +34,7 @@ export interface CartState {
   discountValue: number;
   pointsUsed: number;
   note: string;
+  promotionId: string | null;
   promotionName: string;
 
   addProduct: (p: Product, opts?: { qty?: number; modifiers?: OrderItemModifier[]; note?: string }) => void;
@@ -40,7 +44,7 @@ export interface CartState {
   setLineDiscount: (lineId: string, type: DiscountType, value: number) => void;
   setLineNote: (lineId: string, note: string) => void;
   setLineModifiers: (lineId: string, modifiers: OrderItemModifier[]) => void;
-  setDiscount: (type: DiscountType, value: number, promotionName?: string) => void;
+  setDiscount: (type: DiscountType, value: number, promotionName?: string, promotionId?: string | null) => void;
   setCustomer: (id: string | null, name: string, points: number) => void;
   setTable: (id: string | null, name: string) => void;
   setType: (type: OrderType) => void;
@@ -68,8 +72,37 @@ const EMPTY = {
   discountValue: 0,
   pointsUsed: 0,
   note: '',
+  promotionId: null as string | null,
   promotionName: '',
 };
+
+const DRAFT_KEY = 'cart.draft';
+const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CartDraft {
+  orderId: string | null;
+  orderCode: string;
+  createdAt: number;
+  items: OrderItem[];
+  type: OrderType;
+  tableId: string | null;
+  tableName: string;
+  guests: number;
+  customerId: string | null;
+  customerName: string;
+  customerPoints: number;
+  discountType: DiscountType;
+  discountValue: number;
+  pointsUsed: number;
+  note: string;
+  promotionId: string | null;
+  promotionName: string;
+  savedAt: number;
+}
+
+let draftTimer: ReturnType<typeof setTimeout> | null = null;
+let draftUnsub: (() => void) | null = null;
+let suppressDraftSave = false;
 
 function recalc(item: OrderItem): OrderItem {
   const line = computeLine({
@@ -154,8 +187,8 @@ export const useCart = create<CartState>()((set, get) => ({
     set({ items: get().items.map((i) => (i.id === lineId ? recalc({ ...i, modifiers }) : i)) });
   },
 
-  setDiscount(type, value, promotionName = '') {
-    set({ discountType: type, discountValue: value, promotionName });
+  setDiscount(type, value, promotionName = '', promotionId = null) {
+    set({ discountType: type, discountValue: value, promotionName, promotionId });
   },
 
   setCustomer(id, name, points) {
@@ -183,7 +216,17 @@ export const useCart = create<CartState>()((set, get) => ({
   },
 
   clear() {
-    set({ ...EMPTY, items: [] });
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+    suppressDraftSave = true;
+    try {
+      set({ ...EMPTY, items: [] });
+    } finally {
+      suppressDraftSave = false;
+    }
+    void kvDelete(DRAFT_KEY).catch(() => {});
   },
 
   loadOrder(order) {
@@ -203,6 +246,7 @@ export const useCart = create<CartState>()((set, get) => ({
       discountValue: order.discountValue,
       pointsUsed: order.pointsUsed,
       note: order.note,
+      promotionId: null,
       promotionName: '',
     });
   },
@@ -211,6 +255,82 @@ export const useCart = create<CartState>()((set, get) => ({
     return get().items.length === 0;
   },
 }));
+
+/** B-05: カート下書きを IndexedDB (kv['cart.draft']) から復元し、以降の変更を 250ms デバウンスで自動保存する。 */
+export async function initCartDraft(now = Date.now()): Promise<boolean> {
+  if (!draftUnsub) {
+    draftUnsub = useCart.subscribe((state) => {
+      if (suppressDraftSave) return;
+      if (draftTimer) clearTimeout(draftTimer);
+      draftTimer = setTimeout(() => {
+        draftTimer = null;
+        if (state.items.length === 0) {
+          void kvDelete(DRAFT_KEY).catch(() => {});
+          return;
+        }
+        const draft: CartDraft = {
+          orderId: state.orderId,
+          orderCode: state.orderCode,
+          createdAt: state.createdAt,
+          items: state.items,
+          type: state.type,
+          tableId: state.tableId,
+          tableName: state.tableName,
+          guests: state.guests,
+          customerId: state.customerId,
+          customerName: state.customerName,
+          customerPoints: state.customerPoints,
+          discountType: state.discountType,
+          discountValue: state.discountValue,
+          pointsUsed: state.pointsUsed,
+          note: state.note,
+          promotionId: state.promotionId,
+          promotionName: state.promotionName,
+          savedAt: Date.now(),
+        };
+        void kvSet(DRAFT_KEY, draft).catch(() => {});
+      }, 250);
+    });
+  }
+
+  const draft = await kvGet<CartDraft>(DRAFT_KEY);
+  if (!draft || !Array.isArray(draft.items) || draft.items.length === 0) return false;
+  if (now - draft.savedAt >= DRAFT_TTL_MS) {
+    await kvDelete(DRAFT_KEY);
+    return false;
+  }
+  if (!useCart.getState().isEmpty()) return false;
+
+  suppressDraftSave = true;
+  try {
+    useCart.setState({
+      orderId: draft.orderId ?? null,
+      orderCode: draft.orderCode ?? '',
+      createdAt: draft.createdAt ?? 0,
+      items: draft.items.map((i) => recalc(i)),
+      type: draft.type ?? 'retail',
+      tableId: draft.tableId ?? null,
+      tableName: draft.tableName ?? '',
+      guests: draft.guests ?? 1,
+      customerId: draft.customerId ?? null,
+      customerName: draft.customerName ?? '',
+      customerPoints: draft.customerPoints ?? 0,
+      discountType: draft.discountType ?? 'none',
+      discountValue: draft.discountValue ?? 0,
+      pointsUsed: draft.pointsUsed ?? 0,
+      note: draft.note ?? '',
+      promotionId: draft.promotionId ?? null,
+      promotionName: draft.promotionName ?? '',
+    });
+  } finally {
+    suppressDraftSave = false;
+  }
+  if (typeof window !== 'undefined') {
+    const t = makeT(useApp.getState().settings.lang);
+    toast.info(t('pos.draftRestored'));
+  }
+  return true;
+}
 
 export function cartTotals(cart: CartState, settings: Settings): Totals {
   return computeTotals({

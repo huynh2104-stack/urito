@@ -734,4 +734,11 @@ export const en: Dictionary = {
   'tax.roundCeil': 'Round up',
   'tax.eatInRule': 'Dine-in vs takeaway rule',
   'tax.eatInRuleHint': 'Apply standard tax rate to reduced-rate items when served dine-in.',
+  'common.menu': 'Menu',
+  'pos.decreaseQty': 'Decrease quantity',
+  'pos.increaseQty': 'Increase quantity',
+  'pay.backspace': 'Backspace',
+  'pos.draftRestored': 'Restored unsaved cart draft.',
+  'pwa.reloadConfirmTitle': 'Update available',
+  'pwa.reloadConfirmMessage': 'Your cart has items in progress (saved as draft). Reload now to update?',
 };

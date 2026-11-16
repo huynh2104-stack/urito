@@ -78,7 +78,89 @@ export function snapshotFileName(at = new Date()): string {
 
 export function isSnapshot(value: unknown): value is Snapshot {
   const v = value as Snapshot | null;
-  return !!v && v.app === 'urito' && typeof v.format === 'number' && !!v.data;
+  return !!v && v.app === 'urito' && typeof v.format === 'number' && !!v.data && typeof v.data === 'object';
+}
+
+/** B-08: バックアップファイルのレコード検証エラー（テーブル名と行番号を保持する）。 */
+export class BackupValidationError extends Error {
+  constructor(
+    public readonly table: string,
+    public readonly index: number,
+    public readonly reason: string,
+  ) {
+    super(index >= 0 ? `${table}[${index}]: ${reason}` : `${table}: ${reason}`);
+    this.name = 'BackupValidationError';
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** B-08: 復元前にテーブル単位・行単位でスナップショットの妥当性を検証する。 */
+export function validateSnapshot(value: unknown): Snapshot {
+  if (!isPlainRecord(value)) throw new BackupValidationError('snapshot', -1, 'invalid root object');
+  if (value.app !== 'urito' || typeof value.format !== 'number') {
+    throw new BackupValidationError('snapshot', -1, 'unsupported format');
+  }
+  if (!isPlainRecord(value.data)) throw new BackupValidationError('data', -1, 'missing data object');
+
+  const data = value.data;
+  for (const table of BACKUP_TABLES) {
+    const rows = data[table];
+    if (rows === undefined) continue;
+    if (!Array.isArray(rows)) throw new BackupValidationError(table, -1, 'expected array');
+    for (let i = 0; i < rows.length; i++) {
+      const row: unknown = rows[i];
+      if (!isPlainRecord(row)) throw new BackupValidationError(table, i, 'row must be object');
+      if (typeof row.id !== 'string' || !row.id.trim()) {
+        throw new BackupValidationError(table, i, 'missing string id');
+      }
+      if (table === 'products') {
+        if (typeof row.name !== 'string') throw new BackupValidationError(table, i, 'missing product name');
+        if (!Number.isFinite(row.price) || (row.price as number) < 0) {
+          throw new BackupValidationError(table, i, 'invalid price');
+        }
+        if (!Number.isFinite(row.stock)) throw new BackupValidationError(table, i, 'invalid stock');
+      } else if (table === 'orders') {
+        if (!Array.isArray(row.items)) throw new BackupValidationError(table, i, 'missing items array');
+        if (!Number.isFinite(row.total) || (row.total as number) < 0) {
+          throw new BackupValidationError(table, i, 'invalid total');
+        }
+        if (typeof row.status !== 'string') throw new BackupValidationError(table, i, 'missing status');
+      } else if (table === 'shifts') {
+        if (typeof row.status !== 'string' || !Number.isFinite(row.openedAt)) {
+          throw new BackupValidationError(table, i, 'invalid shift fields');
+        }
+      } else if (
+        table === 'customers' ||
+        table === 'users' ||
+        table === 'categories' ||
+        table === 'modifierGroups' ||
+        table === 'suppliers' ||
+        table === 'areas' ||
+        table === 'diningTables' ||
+        table === 'promotions'
+      ) {
+        if (typeof row.name !== 'string') throw new BackupValidationError(table, i, 'missing name');
+      } else if (table === 'expenses') {
+        if (!Number.isFinite(row.amount)) throw new BackupValidationError(table, i, 'invalid amount');
+      } else if (table === 'stockMovements') {
+        if (typeof row.productId !== 'string' || !Number.isFinite(row.qty)) {
+          throw new BackupValidationError(table, i, 'invalid movement fields');
+        }
+      } else if (table === 'purchases') {
+        if (!Array.isArray(row.items) || !Number.isFinite(row.total)) {
+          throw new BackupValidationError(table, i, 'invalid purchase fields');
+        }
+      } else if (table === 'cashMovements') {
+        if (!Number.isFinite(row.amount) || typeof row.shiftId !== 'string') {
+          throw new BackupValidationError(table, i, 'invalid cash movement');
+        }
+      }
+    }
+  }
+  return value as unknown as Snapshot;
 }
 
 export function snapshotRecordCount(snap: Snapshot): number {
@@ -176,11 +258,11 @@ export function downloadSnapshot(snapshot: Snapshot): void {
 export async function readSnapshotFile(file: File): Promise<Snapshot> {
   const text = await file.text();
   const parsed: unknown = JSON.parse(text);
-  if (!isSnapshot(parsed)) throw new Error('invalid');
-  return parsed;
+  return validateSnapshot(parsed);
 }
 
 export async function restoreSnapshot(snapshot: Snapshot): Promise<void> {
+  const valid = validateSnapshot(snapshot);
   const tables = BACKUP_TABLES.map(
     (name) => (db as unknown as Record<BackupTable, { clear: () => Promise<void>; bulkPut: (rows: unknown[]) => Promise<unknown> }>)[name],
   );
@@ -188,7 +270,7 @@ export async function restoreSnapshot(snapshot: Snapshot): Promise<void> {
     for (const name of BACKUP_TABLES) {
       const table = (db as unknown as Record<BackupTable, { clear: () => Promise<void>; bulkPut: (rows: unknown[]) => Promise<unknown> }>)[name];
       await table.clear();
-      const rows = snapshot.data[name];
+      const rows = valid.data[name];
       if (Array.isArray(rows) && rows.length) await table.bulkPut(rows);
     }
   });
