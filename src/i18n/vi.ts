@@ -722,6 +722,18 @@ export const vi = {
   'err.downloadBackup': 'Tải bản sao lưu',
   'err.retry': 'Thử lại màn hình này',
   'set.deviceNo': 'Mã máy (quầy)',
+  'tax.category': 'Nhóm thuế',
+  'tax.standard': 'Chuẩn (10%)',
+  'tax.reduced': 'Giảm trừ (8%)',
+  'tax.exempt': 'Không chịu thuế',
+  'tax.standardRate': 'Thuế chuẩn (%)',
+  'tax.reducedRate': 'Thuế giảm trừ (%)',
+  'tax.rounding': 'Làm tròn thuế',
+  'tax.roundFloor': 'Làm tròn xuống',
+  'tax.roundRound': 'Làm tròn gần nhất',
+  'tax.roundCeil': 'Làm tròn lên',
+  'tax.eatInRule': 'Tại chỗ / Mang về khác mức thuế',
+  'tax.eatInRuleHint': 'Hàng 8% sẽ tính theo mức chuẩn 10% khi chọn ăn tại chỗ.',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

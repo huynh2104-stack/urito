@@ -22,7 +22,7 @@ import { estimateStorage } from '@/services/backup';
 import { Receipt } from '@/print/Receipt';
 import { sampleOrder } from './sampleOrder';
 import { shrinkImage } from '@/lib/image';
-import type { BusinessType, CurrencyCode, Lang, Settings, TaxMode } from '@/db/types';
+import type { BusinessType, CurrencyCode, Lang, Settings, TaxMode, TaxRounding } from '@/db/types';
 
 type TabKey = 'shop' | 'pricing' | 'receipt' | 'system';
 
@@ -215,10 +215,56 @@ export function SettingsPage() {
               </Select>
             </Field>
 
-            {settings.taxMode !== 'none' && (
-              <Field label={t('set.taxRate')}>
-                <NumberInput value={settings.taxRate} onChange={(v) => set('taxRate', v)} min={0} max={99} />
-              </Field>
+                        {settings.taxMode !== 'none' && (
+              <>
+                <div className="grid grid-3">
+                  <Field label={t('tax.standardRate')}>
+                    <NumberInput
+                      value={(settings.taxRates?.standard ?? settings.taxRate * 100) / 100}
+                      onChange={(v) => {
+                        const bp = Math.max(0, Math.round(v * 100));
+                        void updateSettings({
+                          taxRate: v,
+                          taxRates: { standard: bp, reduced: settings.taxRates?.reduced ?? 800 },
+                        });
+                      }}
+                      min={0}
+                      max={99}
+                      step={0.1}
+                    />
+                  </Field>
+                  <Field label={t('tax.reducedRate')}>
+                    <NumberInput
+                      value={(settings.taxRates?.reduced ?? 800) / 100}
+                      onChange={(v) => {
+                        const bp = Math.max(0, Math.round(v * 100));
+                        void updateSettings({
+                          taxRates: { standard: settings.taxRates?.standard ?? 1000, reduced: bp },
+                        });
+                      }}
+                      min={0}
+                      max={99}
+                      step={0.1}
+                    />
+                  </Field>
+                  <Field label={t('tax.rounding')}>
+                    <Select
+                      value={settings.taxRounding ?? 'floor'}
+                      onChange={(e) => set('taxRounding', e.target.value as TaxRounding)}
+                    >
+                      <option value="floor">{t('tax.roundFloor')}</option>
+                      <option value="round">{t('tax.roundRound')}</option>
+                      <option value="ceil">{t('tax.roundCeil')}</option>
+                    </Select>
+                  </Field>
+                </div>
+                <SwitchRow
+                  label={t('tax.eatInRule')}
+                  hint={t('tax.eatInRuleHint')}
+                  checked={!!settings.eatInRule}
+                  onChange={(v) => set('eatInRule', v)}
+                />
+              </>
             )}
 
             <Field label={t('set.serviceCharge')}>
@@ -238,7 +284,7 @@ export function SettingsPage() {
               onChange={(v) => set('loyaltyEnabled', v)}
             />
             {settings.loyaltyEnabled && (
-              <div className="grid grid-3">
+              <div className="grid grid-2">
                 <Field label={t('set.loyaltyEarnPer')}>
                   <MoneyInput value={settings.loyaltyEarnPer} onChange={(v) => set('loyaltyEarnPer', v)} />
                 </Field>

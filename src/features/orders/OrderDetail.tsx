@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Checkbox, Field, Input, Modal, Select } from '@/components/ui';
 import { formatDateTime } from '@/core/date';
 import { formatQty } from '@/core/money';
+import { orderTaxLinesForDisplay } from '@/core/tax';
 import { db } from '@/db/db';
 import { useApp, useCan, useMoney, useT } from '@/store/app';
 import { toast } from '@/store/ui';
@@ -34,6 +35,7 @@ export function OrderDetail({
   const money = useMoney();
   const lang = useApp((s) => s.settings.lang);
   const user = useApp((s) => s.user);
+  const shift = useApp((s) => s.shift);
   const canVoid = useCan('voidOrder');
   const canRefund = useCan('refund');
 
@@ -47,7 +49,7 @@ export function OrderDetail({
   };
 
   const doVoid = async () => {
-    await voidOrder(order, voidReason.trim(), user);
+    await voidOrder(order, voidReason.trim(), user, shift?.id ?? null);
     toast.success(t('orders.statusVoid'));
     setShowVoid(false);
     await reload();
@@ -113,7 +115,14 @@ export function OrderDetail({
         <Row label={t('common.subtotal')} value={money(order.subtotal)} />
         {order.discount > 0 && <Row label={t('common.discount')} value={`-${money(order.discount)}`} />}
         {order.serviceCharge > 0 && <Row label={t('common.serviceCharge')} value={money(order.serviceCharge)} />}
-        {order.tax > 0 && <Row label={`${t('common.tax')} ${order.taxRate}%`} value={money(order.tax)} />}
+        {orderTaxLinesForDisplay(order).map((tl) => (
+          <Row
+            key={tl.rateBp}
+            label={`${tl.rateBp / 100}% (${money(tl.gross)})`}
+            value={money(tl.tax)}
+            muted
+          />
+        ))}
         {order.pointsValue > 0 && <Row label={t('rc.pointsUsed')} value={`-${money(order.pointsValue)}`} />}
         {order.rounding !== 0 && <Row label={t('common.rounding')} value={money(order.rounding)} />}
         <div className="divider" />
@@ -234,6 +243,7 @@ function RefundModal({
   const money = useMoney();
   const lang = useApp((s) => s.settings.lang);
   const user = useApp((s) => s.user);
+  const shift = useApp((s) => s.shift);
 
   const [qtys, setQtys] = useState<Record<string, number>>({});
   const [reason, setReason] = useState('');
@@ -260,7 +270,7 @@ function RefundModal({
     }
     setBusy(true);
     try {
-      const amount = await refundOrder({ order, lines: picked, reason, method, restock, user });
+      const amount = await refundOrder({ order, lines: picked, reason, method, restock, user, shiftId: shift?.id ?? null });
       toast.success(t('orders.refundDone', { amount: money(amount) }));
       onDone();
     } finally {

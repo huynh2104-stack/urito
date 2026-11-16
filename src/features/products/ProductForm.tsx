@@ -21,7 +21,7 @@ import { squareThumb } from '@/lib/image';
 import { generateInternalBarcode } from '@/lib/barcode';
 import { Icon } from '@/components/Icon';
 import { CameraScanner } from '@/components/CameraScanner';
-import type { Category, ModifierGroup, Product } from '@/db/types';
+import type { Category, ModifierGroup, Product, TaxCategory } from '@/db/types';
 
 const blank = (): Product => ({
   id: newId('p'),
@@ -41,6 +41,7 @@ const blank = (): Product => ({
   image: '',
   modifierGroupIds: [],
   favorite: false,
+  taxCategory: 'standard',
   sort: 0,
   createdAt: Date.now(),
   updatedAt: Date.now(),
@@ -322,6 +323,16 @@ export function ProductForm({
         <div className="grid grid-2">
           <Field label={t('common.color')}>
             <ColorPicker value={draft.color} onChange={(c) => set('color', c)} colors={PALETTE} />
+          </Field>
+          <Field label={t('tax.category')}>
+            <Select
+              value={draft.taxCategory ?? 'standard'}
+              onChange={(e) => set('taxCategory', e.target.value as TaxCategory)}
+            >
+              <option value="standard">{t('tax.standard')}</option>
+              <option value="reduced">{t('tax.reduced')}</option>
+              <option value="exempt">{t('tax.exempt')}</option>
+            </Select>
           </Field>
           <div className="col gap-8">
             <Checkbox

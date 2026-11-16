@@ -11,6 +11,16 @@ export type CurrencyCode = 'VND' | 'JPY' | 'USD';
 export type Role = 'owner' | 'manager' | 'cashier';
 export type BusinessType = 'retail' | 'cafe' | 'restaurant';
 export type TaxMode = 'none' | 'inclusive' | 'exclusive';
+export type TaxCategory = 'standard' | 'reduced' | 'exempt';
+export type TaxRounding = 'floor' | 'round' | 'ceil';
+
+export interface TaxLine {
+  /** 税率（ベーシスポイント: 1000 = 10%、800 = 8%）。 */
+  rateBp: number;
+  gross: number;
+  net: number;
+  tax: number;
+}
 export type DiscountType = 'none' | 'percent' | 'amount';
 export type OrderType = 'retail' | 'dine_in' | 'takeaway' | 'delivery';
 export type OrderStatus = 'open' | 'paid' | 'void' | 'refunded';
@@ -42,6 +52,9 @@ export interface Settings {
   theme: 'light' | 'dark';
   taxMode: TaxMode;
   taxRate: number;
+  taxRates?: { standard: number; reduced: number };
+  taxRounding?: TaxRounding;
+  eatInRule?: boolean;
   serviceChargeRate: number;
   roundTo: number;
   receiptWidth: 58 | 80;
@@ -118,6 +131,7 @@ export interface Product {
   image: string;
   modifierGroupIds: ID[];
   favorite: boolean;
+  taxCategory?: TaxCategory;
   sort: number;
   createdAt: number;
   updatedAt: number;
@@ -193,6 +207,8 @@ export interface OrderItem {
   discount: number;
   total: number;
   refundedQty: number;
+  taxCategory?: TaxCategory;
+  taxRateBp?: number;
 }
 
 export interface Payment {
@@ -207,9 +223,11 @@ export interface Refund {
   id: ID;
   at: number;
   amount: number;
+  debtOffset?: number;
   reason: string;
   method: PayMethod;
   userId: ID;
+  shiftId?: ID | null;
   items: { itemId: ID; qty: number; amount: number }[];
   restock: boolean;
 }
@@ -232,7 +250,11 @@ export interface Order {
   serviceCharge: number;
   taxMode: TaxMode;
   taxRate: number;
+  taxRates?: { standard: number; reduced: number };
+  taxRounding?: TaxRounding;
+  eatInRule?: boolean;
   tax: number;
+  taxLines?: TaxLine[];
   rounding: number;
   total: number;
   cogs: number;

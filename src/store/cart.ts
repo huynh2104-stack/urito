@@ -115,6 +115,7 @@ export const useCart = create<CartState>()((set, get) => ({
           discount: 0,
           total: 0,
           refundedQty: 0,
+          taxCategory: p.taxCategory ?? 'standard',
         }),
       );
     }
@@ -219,6 +220,10 @@ export function cartTotals(cart: CartState, settings: Settings): Totals {
     serviceChargeRate: settings.serviceChargeRate,
     taxMode: settings.taxMode,
     taxRate: settings.taxRate,
+    taxRates: settings.taxRates,
+    taxRounding: settings.taxRounding,
+    orderType: cart.type,
+    eatInRule: settings.eatInRule,
     roundTo: settings.roundTo,
     pointsUsed: settings.loyaltyEnabled ? cart.pointsUsed : 0,
     pointsValue: settings.loyaltyPointValue,

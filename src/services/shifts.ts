@@ -1,7 +1,7 @@
 import { db } from '@/db/db';
 import { getDeviceNo, nextSeq } from '@/db/seq';
 import { formatCode, newId } from '@/core/id';
-import type { CashMovement, Expense, Order, Shift, User } from '@/db/types';
+import type { CashMovement, Expense, Order, Refund, Shift, User } from '@/db/types';
 
 export interface ShiftTotals {
   orderCount: number;
@@ -18,15 +18,16 @@ export interface ShiftTotals {
   byMethod: Record<string, number>;
 }
 
-/** Recomputed from the orders themselves rather than kept as a running total,
- *  so a shift report can never drift away from the invoices behind it. */
+/** 伝票および現在シフトで発生した返金・取消明細からシフト集計を再計算する。 */
 export function computeShiftTotals(
   shift: Shift,
   orders: Order[],
   movements: CashMovement[],
   expenses: Expense[],
+  externalRefunds?: Refund[],
 ): ShiftTotals {
-  const paid = orders.filter((o) => o.status !== 'open' && o.status !== 'void');
+  // B-02: 返金仕訳(refunds.length > 0)を伴う取消済み伝票は、売上回収自体は当該シフトに残るため含める
+  const paid = orders.filter((o) => o.status !== 'open' && (o.status !== 'void' || o.refunds.length > 0));
   const byMethod: Record<string, number> = {};
   let cashSales = 0;
   let nonCashSales = 0;
@@ -41,9 +42,13 @@ export function computeShiftTotals(
     change += order.changeAmount;
   }
 
-  const refunds = paid.flatMap((o) => o.refunds);
+  const refunds =
+    externalRefunds ??
+    paid.flatMap((o) => o.refunds.filter((r) => (r.shiftId !== undefined ? r.shiftId : o.shiftId) === shift.id));
   const refundTotal = refunds.reduce((s, r) => s + r.amount, 0);
-  const cashRefunds = refunds.filter((r) => r.method === 'cash').reduce((s, r) => s + r.amount, 0);
+  const cashRefunds = refunds
+    .filter((r) => r.method === 'cash')
+    .reduce((s, r) => s + Math.max(0, r.amount - (r.debtOffset ?? 0)), 0);
 
   const cashIn = movements.filter((m) => m.type === 'in').reduce((s, m) => s + m.amount, 0);
   const cashOut = movements.filter((m) => m.type === 'out').reduce((s, m) => s + m.amount, 0);
@@ -51,7 +56,7 @@ export function computeShiftTotals(
 
   return {
     orderCount: paid.length,
-    totalSales: paid.reduce((s, o) => s + o.total - o.refundedAmount, 0),
+    totalSales: paid.reduce((s, o) => s + o.total, 0) - refundTotal,
     cashSales: cashSales - change,
     nonCashSales,
     refundTotal,
@@ -75,7 +80,16 @@ export async function loadShiftData(shift: Shift): Promise<{
   const orders = await db.orders.where('shiftId').equals(shift.id).toArray();
   const movements = await db.cashMovements.where('shiftId').equals(shift.id).toArray();
   const expenses = await db.expenses.where('shiftId').equals(shift.id).toArray();
-  return { orders, movements, expenses, totals: computeShiftTotals(shift, orders, movements, expenses) };
+  const ordersWithRefunds = await db.orders.filter((o) => o.refunds.length > 0).toArray();
+  const shiftRefunds = ordersWithRefunds.flatMap((o) =>
+    o.refunds.filter((r) => (r.shiftId !== undefined ? r.shiftId : o.shiftId) === shift.id),
+  );
+  return {
+    orders,
+    movements,
+    expenses,
+    totals: computeShiftTotals(shift, orders, movements, expenses, shiftRefunds),
+  };
 }
 
 export async function openShift(user: User, openingCash: number, note = ''): Promise<Shift> {

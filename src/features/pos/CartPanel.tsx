@@ -151,14 +151,14 @@ export function CartPanel({
             <span className="num">{money(totals.serviceCharge)}</span>
           </div>
         )}
-        {settings.taxMode !== 'none' && totals.tax > 0 && (
-          <div className="total-row">
+        {settings.taxMode !== 'none' && totals.taxLines.map((tl) => (
+          <div className="total-row" key={tl.rateBp}>
             <span>
-              {t('common.tax')} {settings.taxRate}%{settings.taxMode === 'inclusive' ? ' *' : ''}
+              {t('common.tax')} {tl.rateBp / 100}%{settings.taxMode === 'inclusive' ? ' *' : ''}
             </span>
-            <span className="num">{money(totals.tax)}</span>
+            <span className="num">{money(tl.tax)}</span>
           </div>
-        )}
+        ))}
         {totals.pointsRedeemed > 0 && (
           <div className="total-row">
             <span>{t('rc.pointsUsed')}</span>

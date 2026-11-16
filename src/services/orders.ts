@@ -3,6 +3,7 @@ import { getDeviceNo, nextSeq } from '@/db/seq';
 import { formatCode, newId } from '@/core/id';
 import { pointsEarnedFor } from '@/core/cart';
 import { computeOrderRefund, refundAmountFor as coreRefundAmountFor } from '@/core/refund';
+import { divRound, effectiveTaxRateBp } from '@/core/tax';
 import { normaliseQty } from '@/core/money';
 import { cartTotals, type CartState } from '@/store/cart';
 import { applyStockChanges } from './inventory';
@@ -29,7 +30,10 @@ function baseOrder(cart: CartState, ctx: OrderContext): Order {
     guests: cart.guests,
     customerId: cart.customerId,
     customerName: cart.customerName,
-    items: cart.items,
+    items: cart.items.map((i) => ({
+      ...i,
+      taxRateBp: effectiveTaxRateBp(i.taxCategory, cart.type, ctx.settings),
+    })),
     subtotal: totals.subtotal,
     discountType: cart.discountType,
     discountValue: cart.discountValue,
@@ -38,6 +42,7 @@ function baseOrder(cart: CartState, ctx: OrderContext): Order {
     taxMode: ctx.settings.taxMode,
     taxRate: ctx.settings.taxRate,
     tax: totals.tax,
+    taxLines: totals.taxLines,
     rounding: totals.rounding,
     total: totals.total,
     cogs: totals.cogs,
@@ -179,22 +184,56 @@ export async function payOrder(input: PayInput): Promise<Order> {
   });
 }
 
-/** Cancels a paid invoice: stock goes back, customer figures are reversed. */
-export async function voidOrder(order: Order, reason: string, user: User | null): Promise<void> {
+/** 支払済み伝票を取消す：在庫・顧客ポイント・売掛金を戻し、現在シフトに全額返金仕訳を記録する。 */
+export async function voidOrder(
+  order: Order,
+  reason: string,
+  user: User | null,
+  currentShiftId: string | null = null,
+): Promise<void> {
   await db.transaction('rw', orderTables(), async () => {
     const now = Date.now();
     const fresh = await db.orders.get(order.id);
     if (!fresh || fresh.status === 'void') return;
 
+    const wasPaid = fresh.status === 'paid' || fresh.status === 'refunded';
+    const remAmount = wasPaid ? Math.max(0, fresh.total - fresh.refundedAmount) : 0;
+    const refunds = [...fresh.refunds];
+    let nextDueAmount = fresh.dueAmount;
+
+    if (wasPaid && remAmount > 0) {
+      const debtOffset = Math.min(fresh.dueAmount, remAmount);
+      nextDueAmount = Math.max(0, fresh.dueAmount - debtOffset);
+      const method = fresh.payments.find((p) => p.method === 'cash')?.method ?? fresh.payments[0]?.method ?? 'cash';
+      const remainingItems = fresh.items
+        .map((i) => ({ itemId: i.id, qty: normaliseQty(i.qty - i.refundedQty), amount: 0 }))
+        .filter((i) => i.qty > 0);
+      refunds.push({
+        id: newId('rf'),
+        at: now,
+        amount: remAmount,
+        debtOffset,
+        reason,
+        method,
+        userId: user?.id ?? '',
+        shiftId: currentShiftId,
+        items: remainingItems,
+        restock: true,
+      });
+    }
+
     await db.orders.put({
       ...fresh,
       status: 'void',
+      refunds,
+      refundedAmount: wasPaid ? fresh.total : fresh.refundedAmount,
+      dueAmount: nextDueAmount,
       voidedAt: now,
       voidReason: reason,
       updatedAt: now,
     });
 
-    if (fresh.status === 'paid' || fresh.status === 'refunded') {
+    if (wasPaid) {
       await applyStockChanges(
         fresh.items.map((i) => ({
           productId: i.productId,
@@ -211,11 +250,17 @@ export async function voidOrder(order: Order, reason: string, user: User | null)
       if (fresh.customerId) {
         const customer = await db.customers.get(fresh.customerId);
         if (customer) {
+          const alreadyRefunded = fresh.refundedAmount;
+          const prevEarnedReversed = fresh.total > 0 ? divRound(fresh.pointsEarned * alreadyRefunded, fresh.total) : 0;
+          const prevUsedReturned = fresh.total > 0 ? divRound(fresh.pointsUsed * alreadyRefunded, fresh.total) : 0;
+          const earnedToDeduct = Math.max(0, fresh.pointsEarned - prevEarnedReversed);
+          const usedToReturn = Math.max(0, fresh.pointsUsed - prevUsedReturned);
+          const debtToClear = Math.min(customer.debt, fresh.dueAmount);
           await db.customers.put({
             ...customer,
-            points: Math.max(0, customer.points - fresh.pointsEarned + fresh.pointsUsed),
-            debt: Math.max(0, customer.debt - fresh.dueAmount),
-            totalSpent: Math.max(0, customer.totalSpent - fresh.total),
+            points: Math.max(0, customer.points - earnedToDeduct + usedToReturn),
+            debt: Math.max(0, customer.debt - debtToClear),
+            totalSpent: Math.max(0, customer.totalSpent - remAmount),
             orderCount: Math.max(0, customer.orderCount - 1),
             updatedAt: now,
           });
@@ -237,6 +282,7 @@ export interface RefundInput {
   method: Payment['method'];
   restock: boolean;
   user: User | null;
+  shiftId?: string | null;
 }
 
 /** 1明細の返金額を算出する（注文レベルの割引・端数・ポイント・外税を考慮）。 */
@@ -261,13 +307,16 @@ export async function refundOrder(input: RefundInput): Promise<number> {
       return q ? { ...item, refundedQty: normaliseQty(item.refundedQty + q) } : item;
     });
 
+    const debtOffset = Math.min(fresh.dueAmount, amount);
     const refund: Refund = {
       id: newId('rf'),
       at: now,
       amount,
+      debtOffset,
       reason: input.reason,
       method: input.method,
       userId: user?.id ?? '',
+      shiftId: input.shiftId ?? null,
       items: refundItems,
       restock: input.restock,
     };
@@ -278,6 +327,7 @@ export async function refundOrder(input: RefundInput): Promise<number> {
       items,
       refunds: [...fresh.refunds, refund],
       refundedAmount: fresh.refundedAmount + amount,
+      dueAmount: Math.max(0, fresh.dueAmount - debtOffset),
       status: fullyRefunded ? 'refunded' : fresh.status,
       updatedAt: now,
     });
@@ -303,8 +353,23 @@ export async function refundOrder(input: RefundInput): Promise<number> {
     if (fresh.customerId) {
       const customer = await db.customers.get(fresh.customerId);
       if (customer) {
+        const earnedToDeduct =
+          fresh.total > 0
+            ? fullyRefunded
+              ? Math.max(0, fresh.pointsEarned - divRound(fresh.pointsEarned * fresh.refundedAmount, fresh.total))
+              : divRound(fresh.pointsEarned * amount, fresh.total)
+            : 0;
+        const usedToReturn =
+          fresh.total > 0
+            ? fullyRefunded
+              ? Math.max(0, fresh.pointsUsed - divRound(fresh.pointsUsed * fresh.refundedAmount, fresh.total))
+              : divRound(fresh.pointsUsed * amount, fresh.total)
+            : 0;
+        const debtToClear = Math.min(customer.debt, debtOffset);
         await db.customers.put({
           ...customer,
+          points: Math.max(0, customer.points - earnedToDeduct + usedToReturn),
+          debt: Math.max(0, customer.debt - debtToClear),
           totalSpent: Math.max(0, customer.totalSpent - amount),
           updatedAt: now,
         });

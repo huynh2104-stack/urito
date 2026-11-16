@@ -1,5 +1,6 @@
-import type { DiscountType, OrderItem, TaxMode } from '@/db/types';
+import type { DiscountType, OrderItem, OrderType, TaxLine, TaxMode, TaxRounding } from '@/db/types';
 import { percentOf, roundToStep, normaliseQty } from './money';
+import { computeTaxLines } from './tax';
 
 /* The whole pricing engine lives here as pure functions so it can be unit
  * tested without a browser, a database or React. Every screen that shows a
@@ -45,14 +46,18 @@ export function computeLine(line: LineInput): LineTotals {
 }
 
 export interface TotalsInput {
-  items: Pick<OrderItem, 'total' | 'cost' | 'qty'>[];
+  items: Pick<OrderItem, 'total' | 'cost' | 'qty' | 'taxCategory' | 'taxRateBp'>[];
   discountType: DiscountType;
   discountValue: number;
   serviceChargeRate: number;
   taxMode: TaxMode;
   taxRate: number;
+  taxRates?: { standard: number; reduced: number };
+  taxRounding?: TaxRounding;
+  orderType?: OrderType;
+  eatInRule?: boolean;
   roundTo: number;
-  /** Loyalty points the customer is redeeming, and what one point is worth. */
+  /** 顧客が利用するポイント数と1ポイントあたりの換算額。 */
   pointsUsed?: number;
   pointsValue?: number;
 }
@@ -63,6 +68,7 @@ export interface Totals {
   afterDiscount: number;
   serviceCharge: number;
   tax: number;
+  taxLines: TaxLine[];
   pointsRedeemed: number;
   rounding: number;
   total: number;
@@ -85,16 +91,19 @@ export function computeTotals(input: TotalsInput): Totals {
   const serviceCharge = percentOf(afterDiscount, input.serviceChargeRate);
   const base = afterDiscount + serviceCharge;
 
-  let tax = 0;
-  let beforeRedeem = base;
-  if (input.taxMode === 'exclusive') {
-    tax = percentOf(base, input.taxRate);
-    beforeRedeem = base + tax;
-  } else if (input.taxMode === 'inclusive') {
-    // Price already contains VAT - split it out for the receipt only.
-    tax = base - Math.round(base / (1 + input.taxRate / 100));
-    beforeRedeem = base;
-  }
+  const { lines: taxLines, tax } = computeTaxLines({
+    items: input.items,
+    discount,
+    serviceCharge,
+    taxMode: input.taxMode,
+    taxRate: input.taxRate,
+    taxRates: input.taxRates,
+    taxRounding: input.taxRounding,
+    orderType: input.orderType,
+    eatInRule: input.eatInRule,
+  });
+
+  const beforeRedeem = input.taxMode === 'exclusive' ? base + tax : base;
 
   const pointsRedeemed = Math.min(
     beforeRedeem,
@@ -110,6 +119,7 @@ export function computeTotals(input: TotalsInput): Totals {
     afterDiscount,
     serviceCharge,
     tax,
+    taxLines,
     pointsRedeemed,
     rounding,
     total,

@@ -1,5 +1,6 @@
 import { dayKey, eachDay } from '@/core/date';
-import type { Expense, Order, Product } from '@/db/types';
+import { orderTaxLinesForDisplay } from '@/core/tax';
+import type { Expense, Order, Product, TaxLine } from '@/db/types';
 
 export interface SalesSummary {
   revenue: number;
@@ -18,15 +19,28 @@ export interface SalesSummary {
   voidCount: number;
 }
 
-/** Only paid / refunded invoices count as sales; open tickets and voids never do. */
+/** B-02: 支払済み伝票、および返金仕訳(refunds.length > 0)を伴う取消済み伝票を集計対象とする。 */
 export function sellableOrders(orders: Order[]): Order[] {
-  return orders.filter((o) => o.status === 'paid' || o.status === 'refunded');
+  return orders.filter((o) => o.status === 'paid' || o.status === 'refunded' || (o.status === 'void' && o.refunds.length > 0));
 }
 
-export function summarise(orders: Order[], expenses: Expense[] = []): SalesSummary {
+export function summarise(
+  orders: Order[],
+  expenses: Expense[] = [],
+  refundOrders?: Order[],
+  range?: { from: number; to: number },
+): SalesSummary {
   const sold = sellableOrders(orders);
   const revenue = sold.reduce((s, o) => s + o.total, 0);
-  const refunds = sold.reduce((s, o) => s + o.refundedAmount, 0);
+  const refunds =
+    refundOrders && range
+      ? refundOrders.reduce(
+          (sum, o) =>
+            sum +
+            o.refunds.reduce((rs, r) => (r.at >= range.from && r.at <= range.to ? rs + r.amount : rs), 0),
+          0,
+        )
+      : sold.reduce((s, o) => s + o.refundedAmount, 0);
   const netRevenue = revenue - refunds;
   const cogs = sold.reduce((s, o) => s + effectiveCogs(o), 0);
   const tax = sold.reduce((s, o) => s + o.tax, 0);
@@ -50,6 +64,21 @@ export function summarise(orders: Order[], expenses: Expense[] = []): SalesSumma
   };
 }
 
+/** 期間内の税率別集計（軽減税率・標準税率ごとの対象額と税額）を算出する。 */
+export function summariseTaxLines(orders: Order[]): TaxLine[] {
+  const byRate = new Map<number, TaxLine>();
+  for (const o of sellableOrders(orders)) {
+    for (const line of orderTaxLinesForDisplay(o)) {
+      const cur = byRate.get(line.rateBp) ?? { rateBp: line.rateBp, gross: 0, net: 0, tax: 0 };
+      cur.gross += line.gross;
+      cur.net += line.net;
+      cur.tax += line.tax;
+      byRate.set(line.rateBp, cur);
+    }
+  }
+  return [...byRate.values()].sort((a, b) => b.rateBp - a.rateBp);
+}
+
 /** Cost of what the customer actually kept. */
 export function effectiveCogs(order: Order): number {
   return order.items.reduce((s, i) => {
@@ -69,14 +98,25 @@ export interface SeriesPoint {
   secondary?: number;
 }
 
-export function revenueByDay(orders: Order[], from: number, to: number): SeriesPoint[] {
+export function revenueByDay(orders: Order[], from: number, to: number, refundOrders?: Order[]): SeriesPoint[] {
   const sold = sellableOrders(orders);
   const buckets = new Map<string, number>();
   const profit = new Map<string, number>();
   for (const o of sold) {
     const k = dayKey(o.paidAt || o.createdAt);
-    buckets.set(k, (buckets.get(k) ?? 0) + netOrderTotal(o));
-    profit.set(k, (profit.get(k) ?? 0) + (netOrderTotal(o) - o.tax - effectiveCogs(o)));
+    const val = refundOrders ? o.total : netOrderTotal(o);
+    buckets.set(k, (buckets.get(k) ?? 0) + val);
+    profit.set(k, (profit.get(k) ?? 0) + (val - o.tax - effectiveCogs(o)));
+  }
+  if (refundOrders) {
+    for (const o of refundOrders) {
+      for (const r of o.refunds) {
+        if (r.at < from || r.at > to) continue;
+        const k = dayKey(r.at);
+        buckets.set(k, (buckets.get(k) ?? 0) - r.amount);
+        profit.set(k, (profit.get(k) ?? 0) - r.amount);
+      }
+    }
   }
   return eachDay(from, to).map((ts) => {
     const k = dayKey(ts);

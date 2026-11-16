@@ -18,6 +18,7 @@ import {
   revenueByDay,
   revenueByHour,
   summarise,
+  summariseTaxLines,
 } from '@/services/reports';
 import { RANGE_PRESETS, RangePicker } from './RangePicker';
 import type { Expense, Order } from '@/db/types';
@@ -73,6 +74,7 @@ export function ReportsPage() {
   const categories = useLiveQuery(async () => db.categories.toArray(), [], []);
 
   const summary = useMemo(() => summarise(orders, expenses), [orders, expenses]);
+  const taxLines = useMemo(() => summariseTaxLines(orders), [orders]);
   const prevSummary = useMemo(() => summarise(prevOrders), [prevOrders]);
   const byDay = useMemo(() => revenueByDay(orders, range.from, range.to), [orders, range.from, range.to]);
   const byHour = useMemo(() => revenueByHour(orders), [orders]);
@@ -225,6 +227,14 @@ export function ReportsPage() {
                 <SummaryRow label={t('rep.refunds')} value={`-${money(summary.refunds)}`} />
                 <SummaryRow label={t('rep.cogs')} value={`-${money(summary.cogs)}`} />
                 {summary.tax > 0 && <SummaryRow label={t('common.tax')} value={money(summary.tax)} />}
+                {taxLines.length > 1 &&
+                  taxLines.map((tl) => (
+                    <SummaryRow
+                      key={tl.rateBp}
+                      label={`  ${tl.rateBp / 100}% (${money(tl.gross)})`}
+                      value={money(tl.tax)}
+                    />
+                  ))}
                 <div className="divider" style={{ margin: '6px 0' }} />
                 <SummaryRow label={t('rep.grossProfit')} value={money(summary.grossProfit)} strong />
                 <SummaryRow label={t('rep.expenses')} value={`-${money(summary.expenses)}`} />
