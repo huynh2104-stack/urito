@@ -4,6 +4,7 @@ import App from './App';
 import { useApp } from './store/app';
 import { requestPersistentStorage } from './services/backup';
 import { installKeyboardTracking } from './lib/keyboard';
+import { installGlobalErrorLogging } from './lib/errorLog';
 import '@fontsource/be-vietnam-pro/vietnamese-400.css';
 import '@fontsource/be-vietnam-pro/vietnamese-500.css';
 import '@fontsource/be-vietnam-pro/vietnamese-600.css';
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
  * and "the browser silently evicted a week of invoices". */
 void requestPersistentStorage();
 installKeyboardTracking();
+installGlobalErrorLogging();
 
 /* Offline support. The worker caches the built assets on first visit, so the
  * shop keeps selling when the internet drops - which it will. */

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Shell } from './components/Shell';
 import { ConfirmHost, Spinner, ToastHost } from './components/ui';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrintHost } from './print/PrintHost';
 import { useRoute } from './router';
 import { can, ROUTE_PERMISSION, useApp, useT } from './store/app';
@@ -93,6 +94,14 @@ function RouteView() {
 }
 
 export default function App() {
+  return (
+    <ErrorBoundary scope="app">
+      <AppInner />
+    </ErrorBoundary>
+  );
+}
+
+function AppInner() {
   const { ready, settings, user, init } = useApp();
 
   useEffect(() => {
@@ -132,7 +141,9 @@ export default function App() {
   return (
     <>
       <Shell>
-        <RouteView />
+        <ErrorBoundary scope="route">
+          <RouteView />
+        </ErrorBoundary>
       </Shell>
       <ToastHost />
       <ConfirmHost />

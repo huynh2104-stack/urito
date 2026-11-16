@@ -713,4 +713,12 @@ export const en: Dictionary = {
   'bak.preUpgradeTitle': 'Pre-upgrade automatic backups',
   'bak.preUpgradeDesc': 'Created automatically before a database schema upgrade (keeps the latest 2).',
   'bak.preUpgradeDownload': 'Download',
+  'bak.diagExport': 'Export error log',
+  'err.title': 'Something went wrong while rendering',
+  'err.dataSafe': 'Your shop data on this device is safe. Reload the page or download a backup.',
+  'err.chunkTitle': 'A new version is available',
+  'err.chunkHint': 'Your data is safe. Reload the page to load the updated app.',
+  'err.reload': 'Reload page',
+  'err.downloadBackup': 'Download backup',
+  'err.retry': 'Retry view',
 };

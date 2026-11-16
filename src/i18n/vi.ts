@@ -713,6 +713,14 @@ export const vi = {
   'bak.preUpgradeTitle': 'Bản sao lưu tự động trước nâng cấp',
   'bak.preUpgradeDesc': 'Được tạo tự động trước khi nâng cấp cấu trúc dữ liệu (giữ tối đa 2 bản).',
   'bak.preUpgradeDownload': 'Tải về',
+  'bak.diagExport': 'Xuất nhật ký lỗi',
+  'err.title': 'Đã xảy ra sự cố hiển thị',
+  'err.dataSafe': 'Dữ liệu bán hàng trên máy vẫn an toàn. Hãy tải lại trang hoặc tải bản sao lưu.',
+  'err.chunkTitle': 'Ứng dụng vừa có bản cập nhật',
+  'err.chunkHint': 'Dữ liệu vẫn an toàn. Hãy tải lại trang để nạp phiên bản mới.',
+  'err.reload': 'Tải lại trang',
+  'err.downloadBackup': 'Tải bản sao lưu',
+  'err.retry': 'Thử lại màn hình này',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

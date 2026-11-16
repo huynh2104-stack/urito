@@ -713,4 +713,12 @@ export const ja: Dictionary = {
   'bak.preUpgradeTitle': 'アップグレード前の自動退避ファイル',
   'bak.preUpgradeDesc': 'データベース更新前に自動で作成されたバックアップです（最新2件を保持）。',
   'bak.preUpgradeDownload': 'ダウンロード',
+  'bak.diagExport': '診断ログを書き出す',
+  'err.title': '画面の表示中にエラーが発生しました',
+  'err.dataSafe': '端末内の売上・商品データは安全に保持されています。再読込するかバックアップを保存してください。',
+  'err.chunkTitle': '新しいバージョンが公開されています',
+  'err.chunkHint': 'データは安全です。最新の画面を読み込むためページを再読込してください。',
+  'err.reload': 'ページを再読込',
+  'err.downloadBackup': 'バックアップを保存',
+  'err.retry': '再試行',
 };
