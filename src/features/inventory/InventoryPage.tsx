@@ -2,6 +2,7 @@ import { ProductThumb } from '@/components/ProductThumb';
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, Field, Input, Modal, NumberInput, SearchInput, Select, Stat, Tabs } from '@/components/ui';
 import { db } from '@/db/db';
+import { getDeviceNo, nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatDateTime } from '@/core/date';
 import { formatQty } from '@/core/money';
@@ -56,25 +57,29 @@ export function InventoryPage() {
       const qty = Math.max(1, Math.ceil((p.minStock > 0 ? p.minStock * 2 : 10) - Math.max(0, p.stock)));
       return { productId: p.id, name: p.name, qty, cost: p.cost, total: Math.round(p.cost * qty) };
     });
-    const count = await db.purchases.count();
-    const draft: Purchase = {
-      id: newId('pu'),
-      code: formatCode('PN', count + 1),
-      supplierId: null,
-      supplierName: '',
-      items,
-      subtotal: items.reduce((s, i) => s + i.total, 0),
-      discount: 0,
-      total: items.reduce((s, i) => s + i.total, 0),
-      paid: 0,
-      status: 'draft',
-      note: t('inv.reorderNote'),
-      userId: user?.id ?? '',
-      userName: user?.name ?? '',
-      createdAt: Date.now(),
-      receivedAt: 0,
-    };
-    await db.purchases.add(draft);
+    const draft = await db.transaction('rw', [db.purchases, db.kv], async () => {
+      const seq = await nextSeq('purchase');
+      const dev = await getDeviceNo();
+      const row: Purchase = {
+        id: newId('pu'),
+        code: formatCode('PN', seq, new Date(), dev),
+        supplierId: null,
+        supplierName: '',
+        items,
+        subtotal: items.reduce((s, i) => s + i.total, 0),
+        discount: 0,
+        total: items.reduce((s, i) => s + i.total, 0),
+        paid: 0,
+        status: 'draft',
+        note: t('inv.reorderNote'),
+        userId: user?.id ?? '',
+        userName: user?.name ?? '',
+        createdAt: Date.now(),
+        receivedAt: 0,
+      };
+      await db.purchases.add(row);
+      return row;
+    });
     toast.success(t('inv.reorderCreated', { code: draft.code }));
     navigate('/purchases');
   };

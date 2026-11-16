@@ -69,6 +69,8 @@ export interface User {
   id: ID;
   name: string;
   pin: string;
+  pinHash?: string;
+  pinSalt?: string;
   role: Role;
   active: boolean;
   color: string;

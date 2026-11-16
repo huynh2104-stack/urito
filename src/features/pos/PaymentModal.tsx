@@ -90,7 +90,6 @@ export function PaymentModal({ onClose }: { onClose: () => void }) {
         payments: list,
         allowDebt,
       });
-      await useApp.getState().reloadSettings();
       await reloadShift();
       void notifyOrderPaid();
       setDone(order);

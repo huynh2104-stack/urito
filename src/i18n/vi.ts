@@ -721,6 +721,7 @@ export const vi = {
   'err.reload': 'Tải lại trang',
   'err.downloadBackup': 'Tải bản sao lưu',
   'err.retry': 'Thử lại màn hình này',
+  'set.deviceNo': 'Mã máy (quầy)',
 } as const;
 
 export type TranslationKey = keyof typeof vi;

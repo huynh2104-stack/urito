@@ -12,6 +12,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { db, BACKUP_TABLES, type BackupTable } from '@/db/db';
+import { getDeviceNo, peekSeq, setDeviceNo, setSeq } from '@/db/seq';
 import { CURRENCIES } from '@/core/money';
 import { LANGUAGES } from '@/i18n';
 import { APP_VERSION } from '@/version';
@@ -35,9 +36,13 @@ export function SettingsPage() {
   const [storage, setStorage] = useState<{ usage: number; quota: number } | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [deviceNo, setDeviceNoState] = useState('');
+  const [orderSeq, setOrderSeq] = useState(1);
 
   useEffect(() => {
     void estimateStorage().then(setStorage);
+    void getDeviceNo().then(setDeviceNoState);
+    void peekSeq('order').then((n) => setOrderSeq(n + 1));
   }, []);
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => void updateSettings({ [key]: value });
@@ -233,7 +238,7 @@ export function SettingsPage() {
               onChange={(v) => set('loyaltyEnabled', v)}
             />
             {settings.loyaltyEnabled && (
-              <div className="grid grid-2">
+              <div className="grid grid-3">
                 <Field label={t('set.loyaltyEarnPer')}>
                   <MoneyInput value={settings.loyaltyEarnPer} onChange={(v) => set('loyaltyEarnPer', v)} />
                 </Field>
@@ -290,12 +295,29 @@ export function SettingsPage() {
                 onChange={(v) => set('printAfterPay', v)}
               />
               <div className="divider" />
-              <div className="grid grid-2">
+              <div className="grid grid-3">
                 <Field label={t('set.orderPrefix')}>
                   <Input value={settings.orderPrefix} onChange={(e) => set('orderPrefix', e.target.value)} />
                 </Field>
+                <Field label={t('set.deviceNo')}>
+                  <Input
+                    value={deviceNo}
+                    maxLength={4}
+                    onChange={(e) => setDeviceNoState(e.target.value.toUpperCase())}
+                    onBlur={() => void setDeviceNo(deviceNo).then(setDeviceNoState)}
+                  />
+                </Field>
                 <Field label={t('set.nextOrderNo')}>
-                  <NumberInput value={settings.nextOrderNo} onChange={(v) => set('nextOrderNo', v)} min={1} />
+                  <NumberInput
+                    value={orderSeq}
+                    onChange={(v) => {
+                      const next = Math.max(1, v);
+                      setOrderSeq(next);
+                      void setSeq('order', next - 1);
+                      set('nextOrderNo', next);
+                    }}
+                    min={1}
+                  />
                 </Field>
               </div>
               <Button icon="eye" onClick={() => setPreviewOpen(true)}>

@@ -721,4 +721,5 @@ export const en: Dictionary = {
   'err.reload': 'Reload page',
   'err.downloadBackup': 'Download backup',
   'err.retry': 'Retry view',
+  'set.deviceNo': 'Terminal no.',
 };

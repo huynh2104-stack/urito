@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button, Field, Input, Modal, SearchInput } from '@/components/ui';
 import { db } from '@/db/db';
+import { nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
 import { useApp, useMoney, useT } from '@/store/app';
@@ -37,24 +38,27 @@ export function CustomerPickerModal({ onClose }: { onClose: () => void }) {
 
   const create = async () => {
     if (!name.trim()) return;
-    const count = await db.customers.count();
-    const customer: Customer = {
-      id: newId('cu'),
-      code: `KH${String(count + 1).padStart(4, '0')}`,
-      name: name.trim(),
-      phone: phone.trim(),
-      address: '',
-      note: '',
-      points: 0,
-      debt: 0,
-      totalSpent: 0,
-      orderCount: 0,
-      birthday: '',
-      active: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await db.customers.add(customer);
+    const customer = await db.transaction('rw', [db.customers, db.kv], async () => {
+      const seq = await nextSeq('customer');
+      const row: Customer = {
+        id: newId('cu'),
+        code: `KH${String(seq).padStart(4, '0')}`,
+        name: name.trim(),
+        phone: phone.trim(),
+        address: '',
+        note: '',
+        points: 0,
+        debt: 0,
+        totalSpent: 0,
+        orderCount: 0,
+        birthday: '',
+        active: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await db.customers.add(row);
+      return row;
+    });
     toast.success(t('common.saved'));
     choose(customer);
   };

@@ -1,4 +1,5 @@
 import { db } from '@/db/db';
+import { getDeviceNo, nextSeq } from '@/db/seq';
 import { formatCode, newId } from '@/core/id';
 import { pointsEarnedFor } from '@/core/cart';
 import { computeOrderRefund, refundAmountFor as coreRefundAmountFor } from '@/core/refund';
@@ -13,7 +14,7 @@ export interface OrderContext {
   shiftId: string | null;
 }
 
-const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers];
+const orderTables = () => [db.orders, db.products, db.stockMovements, db.settings, db.customers, db.kv];
 
 function baseOrder(cart: CartState, ctx: OrderContext): Order {
   const totals = cartTotals(cart, ctx.settings);
@@ -122,9 +123,9 @@ export async function payOrder(input: PayInput): Promise<Order> {
       }
     }
 
-    const seq = settings.nextOrderNo;
-    order.code = formatCode(settings.orderPrefix, seq, new Date(now));
-    await db.settings.put({ ...settings, nextOrderNo: seq + 1, updatedAt: now });
+    const seq = await nextSeq('order');
+    const deviceNo = await getDeviceNo();
+    order.code = formatCode(settings.orderPrefix, seq, new Date(now), deviceNo);
 
     const payments: Payment[] = input.payments
       .filter((p) => p.amount > 0)

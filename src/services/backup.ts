@@ -263,7 +263,8 @@ export async function mergeSnapshot(snapshot: Snapshot): Promise<MergeResult> {
     }
     const hadProduct = existingIds.get('products')!;
     const hadCustomer = existingIds.get('customers')!;
-    const localCodes = new Set((await db.orders.toArray()).map((o) => o.code).filter(Boolean));
+    const codeKeys = await db.orders.orderBy('code').uniqueKeys();
+    const localCodes = new Set(codeKeys.filter((k): k is string => typeof k === 'string' && k !== ''));
 
     const incoming = <T extends { id: string }>(name: BackupTable): T[] => {
       const rows = (snapshot.data[name] ?? []) as T[];

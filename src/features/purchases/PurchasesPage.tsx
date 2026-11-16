@@ -13,6 +13,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { db } from '@/db/db';
+import { getDeviceNo, nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { formatCode, newId } from '@/core/id';
 import { formatDateTime } from '@/core/date';
@@ -109,7 +110,6 @@ export function PurchasesPage() {
           purchase={editing === 'new' ? null : editing}
           suppliers={suppliers}
           products={products}
-          count={purchases.length}
           onClose={() => setEditing(null)}
         />
       )}
@@ -121,13 +121,11 @@ function PurchaseForm({
   purchase,
   suppliers,
   products,
-  count,
   onClose,
 }: {
   purchase: Purchase | null;
   suppliers: Supplier[];
   products: Product[];
-  count: number;
   onClose: () => void;
 }) {
   const t = useT();
@@ -179,30 +177,33 @@ function PurchaseForm({
       }),
     );
 
-  const buildPurchase = (status: 'draft' | 'received'): Purchase => ({
-    id: purchase?.id ?? newId('pu'),
-    code: purchase?.code ?? formatCode('PN', count + 1),
-    supplierId: supplierId || null,
-    supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? '',
-    items,
-    subtotal,
-    discount: 0,
-    total: subtotal,
-    paid,
-    status,
-    note: note.trim(),
-    userId: user?.id ?? '',
-    userName: user?.name ?? '',
-    createdAt: purchase?.createdAt ?? Date.now(),
-    receivedAt: purchase?.receivedAt ?? 0,
-  });
+  const buildPurchase = async (status: 'draft' | 'received'): Promise<Purchase> => {
+    const code = purchase?.code || formatCode('PN', await nextSeq('purchase'), new Date(), await getDeviceNo());
+    return {
+      id: purchase?.id ?? newId('pu'),
+      code,
+      supplierId: supplierId || null,
+      supplierName: suppliers.find((s) => s.id === supplierId)?.name ?? '',
+      items,
+      subtotal,
+      discount: 0,
+      total: subtotal,
+      paid,
+      status,
+      note: note.trim(),
+      userId: user?.id ?? '',
+      userName: user?.name ?? '',
+      createdAt: purchase?.createdAt ?? Date.now(),
+      receivedAt: purchase?.receivedAt ?? 0,
+    };
+  };
 
   const saveDraft = async () => {
     if (!items.length) {
       toast.warning(t('pur.emptyItems'));
       return;
     }
-    await db.purchases.put(buildPurchase('draft'));
+    await db.purchases.put(await buildPurchase('draft'));
     toast.success(t('common.saved'));
     onClose();
   };
@@ -212,7 +213,7 @@ function PurchaseForm({
       toast.warning(t('pur.emptyItems'));
       return;
     }
-    const row = buildPurchase('draft');
+    const row = await buildPurchase('draft');
     const ok = await confirmDialog({
       title: t('pur.receive'),
       message: `${row.code} · ${money(row.total)}`,

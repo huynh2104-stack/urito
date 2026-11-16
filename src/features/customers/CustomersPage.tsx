@@ -12,6 +12,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { db } from '@/db/db';
+import { nextSeq } from '@/db/seq';
 import { useLiveQuery } from '@/lib/useLiveQuery';
 import { newId } from '@/core/id';
 import { formatDateTime } from '@/core/date';
@@ -155,13 +156,7 @@ export function CustomersPage() {
         )}
       </div>
 
-      {editing && (
-        <CustomerForm
-          customer={editing === 'new' ? null : editing}
-          count={customers.length}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editing && <CustomerForm customer={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {viewing && <CustomerDetail customer={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
@@ -169,11 +164,9 @@ export function CustomersPage() {
 
 function CustomerForm({
   customer,
-  count,
   onClose,
 }: {
   customer: Customer | null;
-  count: number;
   onClose: () => void;
 }) {
   const t = useT();
@@ -181,7 +174,7 @@ function CustomerForm({
     () =>
       customer ?? {
         id: newId('cu'),
-        code: `KH${String(count + 1).padStart(4, '0')}`,
+        code: '',
         name: '',
         phone: '',
         address: '',
@@ -202,7 +195,10 @@ function CustomerForm({
 
   const save = async () => {
     if (!draft.name.trim()) return;
-    await db.customers.put({ ...draft, name: draft.name.trim(), updatedAt: Date.now() });
+    await db.transaction('rw', [db.customers, db.kv], async () => {
+      const code = draft.code || `KH${String(await nextSeq('customer')).padStart(4, '0')}`;
+      await db.customers.put({ ...draft, code, name: draft.name.trim(), updatedAt: Date.now() });
+    });
     toast.success(t('common.saved'));
     onClose();
   };

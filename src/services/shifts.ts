@@ -1,4 +1,5 @@
 import { db } from '@/db/db';
+import { getDeviceNo, nextSeq } from '@/db/seq';
 import { formatCode, newId } from '@/core/id';
 import type { CashMovement, Expense, Order, Shift, User } from '@/db/types';
 
@@ -78,31 +79,34 @@ export async function loadShiftData(shift: Shift): Promise<{
 }
 
 export async function openShift(user: User, openingCash: number, note = ''): Promise<Shift> {
-  const now = Date.now();
-  const count = await db.shifts.count();
-  const shift: Shift = {
-    id: newId('sh'),
-    code: formatCode('CA', count + 1, new Date(now)),
-    userId: user.id,
-    userName: user.name,
-    openedAt: now,
-    closedAt: 0,
-    openingCash: Math.round(openingCash),
-    cashIn: 0,
-    cashOut: 0,
-    cashSales: 0,
-    nonCashSales: 0,
-    refundTotal: 0,
-    expectedCash: Math.round(openingCash),
-    countedCash: 0,
-    difference: 0,
-    orderCount: 0,
-    totalSales: 0,
-    note,
-    status: 'open',
-  };
-  await db.shifts.add(shift);
-  return shift;
+  return db.transaction('rw', [db.shifts, db.kv], async () => {
+    const now = Date.now();
+    const seq = await nextSeq('shift');
+    const deviceNo = await getDeviceNo();
+    const shift: Shift = {
+      id: newId('sh'),
+      code: formatCode('CA', seq, new Date(now), deviceNo),
+      userId: user.id,
+      userName: user.name,
+      openedAt: now,
+      closedAt: 0,
+      openingCash: Math.round(openingCash),
+      cashIn: 0,
+      cashOut: 0,
+      cashSales: 0,
+      nonCashSales: 0,
+      refundTotal: 0,
+      expectedCash: Math.round(openingCash),
+      countedCash: 0,
+      difference: 0,
+      orderCount: 0,
+      totalSales: 0,
+      note,
+      status: 'open',
+    };
+    await db.shifts.add(shift);
+    return shift;
+  });
 }
 
 export async function closeShift(shift: Shift, countedCash: number, note: string): Promise<Shift> {

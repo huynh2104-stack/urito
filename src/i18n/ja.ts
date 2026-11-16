@@ -721,4 +721,5 @@ export const ja: Dictionary = {
   'err.reload': 'ページを再読込',
   'err.downloadBackup': 'バックアップを保存',
   'err.retry': '再試行',
+  'set.deviceNo': 'レジ番号',
 };

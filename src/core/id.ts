@@ -16,10 +16,11 @@ export function newId(prefix = ''): string {
   return `${prefix}${time}${randomPart(6)}`;
 }
 
-/** Human-facing document code, e.g. HD250905-0042. */
-export function formatCode(prefix: string, seq: number, at = new Date()): string {
+/** 伝票・シフト等の表示用コードを生成する（端末番号あり: HD01-261116-0042）。 */
+export function formatCode(prefix: string, seq: number, at = new Date(), deviceNo = ''): string {
   const y = String(at.getFullYear()).slice(-2);
   const m = String(at.getMonth() + 1).padStart(2, '0');
   const d = String(at.getDate()).padStart(2, '0');
-  return `${prefix}${y}${m}${d}-${String(seq).padStart(4, '0')}`;
+  const dev = deviceNo ? `${deviceNo}-` : '';
+  return `${prefix}${dev}${y}${m}${d}-${String(seq).padStart(4, '0')}`;
 }

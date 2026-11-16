@@ -39,6 +39,7 @@ export function OrdersPage() {
   const [custom, setCustom] = useState(() => rangeOf('today'));
   const [status, setStatus] = useState<'all' | OrderStatus>('all');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Order | null>(null);
 
   const range = preset === 'custom' ? custom : rangeOf(preset);
@@ -77,6 +78,12 @@ export function OrdersPage() {
     }
     return list;
   }, [orders, status, search, canSeeAll, user]);
+
+  const PAGE_SIZE = 100;
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageStart = safePage * PAGE_SIZE;
+  const paged = useMemo(() => visible.slice(pageStart, pageStart + PAGE_SIZE), [visible, pageStart]);
 
   const summary = summarise(visible);
 
@@ -121,7 +128,13 @@ export function OrdersPage() {
       <div className="page-head">
         <div>
           <div className="page-title">{t('orders.title')}</div>
-          <div className="page-sub">{t('common.showing', { from: 1, to: visible.length, total: orders.length })}</div>
+          <div className="page-sub">
+            {t('common.showing', {
+              from: visible.length ? pageStart + 1 : 0,
+              to: Math.min(pageStart + PAGE_SIZE, visible.length),
+              total: visible.length,
+            })}
+          </div>
         </div>
         <Button icon="download" onClick={exportCsv} disabled={!visible.length}>
           {t('orders.exportCsv')}
@@ -173,7 +186,7 @@ export function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((order) => (
+                {paged.map((order) => (
                   <tr key={order.id} className="clickable" onClick={() => setSelected(order)}>
                     <td className="strong">{order.code || '—'}</td>
                     <td className="nowrap">{formatDateTime(order.paidAt || order.createdAt, settings.lang)}</td>
@@ -194,6 +207,20 @@ export function OrdersPage() {
           </div>
         )}
       </div>
+
+      {pageCount > 1 && (
+        <div className="row between mt-12">
+          <Button size="sm" disabled={safePage <= 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+            {t('common.back')}
+          </Button>
+          <span className="small muted">
+            {safePage + 1} / {pageCount}
+          </span>
+          <Button size="sm" disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>
+            {t('common.next')}
+          </Button>
+        </div>
+      )}
 
       {selected && (
         <Modal open onClose={() => setSelected(null)} size="lg" title={t('orders.detail')}>

@@ -11,6 +11,7 @@ import {
   Select,
 } from '@/components/ui';
 import { db } from '@/db/db';
+import { nextSeq } from '@/db/seq';
 import { newId } from '@/core/id';
 import { PALETTE } from '@/db/defaults';
 import { useApp, useT } from '@/store/app';
@@ -75,13 +76,13 @@ export function ProductForm({
   };
 
   const makeBarcode = async () => {
-    const all = await db.products.toArray();
-    set('barcode', generateInternalBarcode(new Set(all.map((p) => p.barcode).filter(Boolean))));
+    const keys = await db.products.orderBy('barcode').uniqueKeys();
+    set('barcode', generateInternalBarcode(new Set(keys.filter((k): k is string => typeof k === 'string' && k !== ''))));
   };
 
   const makeSku = async () => {
-    const count = await db.products.count();
-    set('sku', `SP${String(count + 1).padStart(4, '0')}`);
+    const seq = await nextSeq('sku');
+    set('sku', `SP${String(seq).padStart(4, '0')}`);
   };
 
   const margin = draft.price > 0 ? ((draft.price - draft.cost) / draft.price) * 100 : 0;

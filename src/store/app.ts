@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
+import { liveQuery } from 'dexie';
 import { db, ensureDbOpen, kvGet, kvSet } from '@/db/db';
 import { loadOrInitSettings } from '@/db/seed';
 import { defaultSettings } from '@/db/defaults';
@@ -12,6 +13,8 @@ const LAST_USER_KEY = 'session.lastUserId';
  *  staff picker instead of silently signing the first user back in. */
 const SIGNED_OUT = '__signed_out__';
 
+export type SettingsPatch = Partial<Settings> | ((cur: Settings) => Partial<Settings>);
+
 export interface AppState {
   ready: boolean;
   settings: Settings;
@@ -23,13 +26,15 @@ export interface AppState {
 
   init: () => Promise<void>;
   reloadSettings: () => Promise<void>;
-  updateSettings: (patch: Partial<Settings>) => Promise<void>;
+  updateSettings: (patch: SettingsPatch) => Promise<void>;
   reloadUsers: () => Promise<void>;
   setUser: (user: User | null) => Promise<void>;
   signOut: () => Promise<void>;
   reloadShift: () => Promise<void>;
   setUpdateReady: (v: boolean) => void;
 }
+
+let settingsSub: { unsubscribe: () => void } | null = null;
 
 export const useApp = create<AppState>()((set, get) => ({
   ready: false,
@@ -42,15 +47,23 @@ export const useApp = create<AppState>()((set, get) => ({
   async init() {
     await ensureDbOpen();
     const settings = await loadOrInitSettings();
-    applyTheme(settings.theme);
-    document.documentElement.lang = settings.lang;
+    applyDomSettings(settings);
+
+    settingsSub?.unsubscribe();
+    settingsSub = liveQuery(() => db.settings.get('app')).subscribe({
+      next: (fresh) => {
+        if (!fresh) return;
+        applyDomSettings(fresh);
+        set({ settings: fresh });
+      },
+    });
+
     const users = await db.users.filter((u) => u.active).toArray();
     let user: User | null = null;
     const lastId = await kvGet<string>(LAST_USER_KEY);
     const signedOut = lastId === SIGNED_OUT && users.length > 1;
     if (lastId && !signedOut) user = users.find((u) => u.id === lastId) ?? null;
-    // Auto sign-in only when it is safe: a single account without a PIN, or the
-    // shop has switched the staff picker off and the fallback is not PIN-locked.
+    // 自動ログインは安全な場合のみ（PIN未設定の単一アカウント等）
     if (!user && !signedOut && !settings.requireLogin) {
       const fallback = users.find((u) => u.role === 'owner') ?? users[0];
       if (fallback && !fallback.pin) user = fallback;
@@ -62,16 +75,26 @@ export const useApp = create<AppState>()((set, get) => ({
 
   async reloadSettings() {
     const settings = await loadOrInitSettings();
-    applyTheme(settings.theme);
-    document.documentElement.lang = settings.lang;
+    applyDomSettings(settings);
     set({ settings });
   },
 
   async updateSettings(patch) {
-    const next: Settings = { ...get().settings, ...patch, updatedAt: Date.now() };
-    await db.settings.put(next);
-    applyTheme(next.theme);
-    document.documentElement.lang = next.lang;
+    const next = await db.transaction('rw', db.settings, async () => {
+      const cur = (await db.settings.get('app')) ?? get().settings;
+      const partial = typeof patch === 'function' ? patch(cur) : patch;
+      const mergedBackup = partial.backup ? { ...cur.backup, ...partial.backup } : cur.backup;
+      const updated: Settings = {
+        ...cur,
+        ...partial,
+        backup: mergedBackup,
+        id: 'app',
+        updatedAt: Date.now(),
+      };
+      await db.settings.put(updated);
+      return updated;
+    });
+    applyDomSettings(next);
     set({ settings: next });
   },
 
@@ -111,7 +134,14 @@ export async function findOpenShift(userId: string): Promise<Shift | null> {
   return own.find((s) => s.userId === userId) ?? own[0];
 }
 
+function applyDomSettings(settings: Settings): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.theme = settings.theme;
+  document.documentElement.lang = settings.lang;
+}
+
 export function applyTheme(theme: 'light' | 'dark'): void {
+  if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = theme;
 }
 
